@@ -19,14 +19,22 @@ const Auth = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [loading, setLoading] = useState(false); // Added loading state
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
-    setLoading(true); // Start loading
+
+    // --- FRONTEND VALIDATION ---
+    // Only validate phone length during registration
+    if (!isLogin && phoneNumber.length !== 10) {
+      setError("Phone number must be exactly 10 digits.");
+      return;
+    }
+
+    setLoading(true);
 
     const url = isLogin
       ? "http://localhost:8080/api/users/login"
@@ -53,22 +61,25 @@ const Auth = () => {
       if (response.ok) {
         setSuccess(text);
         if (isLogin) {
-          // Navigate to dashboard after a short delay to show success
           setTimeout(() => navigate("/dashboard"), 1200);
         } else {
-          // Switch to login view after successful registration
           setTimeout(() => {
             setIsLogin(true);
             setSuccess("");
+            // Clear registration-specific fields
+            setName("");
+            setPhoneNumber("");
           }, 2000);
         }
       } else {
+        // If the backend sends a JSON error map, you might need to parse it
+        // but for now, we assume it's a plain text error message
         setError(text);
       }
     } catch (err) {
       setError("Network error: Is the backend running?");
     } finally {
-      setLoading(false); // Stop loading regardless of outcome
+      setLoading(false);
     }
   };
 
@@ -114,11 +125,16 @@ const Auth = () => {
                 <Phone className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
                 <input
                   type="tel"
-                  placeholder="Phone Number"
+                  placeholder="Phone Number (10 digits)"
+                  maxLength={10}
                   className="w-full pl-12 pr-4 py-4 bg-white/50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
                   required={!isLogin}
                   value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  onChange={(e) => {
+                    // Remove any non-numeric characters automatically
+                    const val = e.target.value.replace(/\D/g, "");
+                    setPhoneNumber(val);
+                  }}
                 />
               </div>
             </>
