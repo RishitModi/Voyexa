@@ -17,3 +17,9 @@ geoapify:
   base-url: https://api.geoapify.com/v1/geocode/autocomplete
   api-key: 7e9fb89c784640d4878deb402da2367a
   limit: 10
+
+gemini:
+  api:
+    planner-key: AIzaSyDax3hzFdpF-sgLljerlV9RqkuZpAgGpMY
+    validator-key: AIzaSyCMp2HBuvpdtJwt_0U3vH_tUMXzYUShovs
+    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent

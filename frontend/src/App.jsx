@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import CreateTrip from "./pages/CreateTrip";
+import ItineraryResult from "./pages/ItineraryResult"; // Import the new page
 import FloatingLines from "./components/FloatingLines";
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
             <Route path="/" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/create-trip" element={<CreateTrip />} />
+            <Route path="/itinerary-result" element={<ItineraryResult />} /> {/* Add the new route */}
           </Routes>
         </div>
       </div>
