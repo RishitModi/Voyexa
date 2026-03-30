@@ -168,23 +168,25 @@ const LocationAutocomplete = ({
 const CreateTrip = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
-    const [isSaving, setIsSaving] = useState(false);
-    const [saveError, setSaveError] = useState("");
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [apiError, setApiError] = useState("");
 
     const [tripConfig, setTripConfig] = useState({
         origin: "",
         destination: "",
         startDate: "",
         endDate: "",
-        dateFlexibility: "Exact dates",
+        flexibility: "Exact dates", // Mapped from dateFlexibility
         travelers: "Solo",
-        adultCount: 2,
-        childCount: 0,
+        travelerCount: 1, // Mapped from adultCount/childCount
+        budget: "Moderate",
+        accommodationType: "Any", // Mapped from accommodationPreference
+        travelPace: "Balanced",
         interests: [],
-        otherInterest: "",
-        accommodationPreference: "Any",
-        tripPace: "Balanced",
-        budget: "Moderate"
+        otherInterests: [], // Mapped from otherInterest
+        // --- Internal component state below, not sent to API ---
+        adultCount: 1,
+        childCount: 0,
     });
 
     const travelerOptions = [
@@ -225,20 +227,14 @@ const CreateTrip = () => {
 
     const toggleInterest = (interest) => {
         const selected = tripConfig.interests.includes(interest);
-
-        if (selected) {
-            const updated = tripConfig.interests.filter((item) => item !== interest);
-            setTripConfig({
-                ...tripConfig,
-                interests: updated,
-                otherInterest: interest === "Others" ? "" : tripConfig.otherInterest
-            });
-            return;
-        }
+        const updatedInterests = selected
+            ? tripConfig.interests.filter((item) => item !== interest)
+            : [...tripConfig.interests, interest];
 
         setTripConfig({
             ...tripConfig,
-            interests: [...tripConfig.interests, interest]
+            interests: updatedInterests,
+            otherInterests: interest === "Others" && !selected ? tripConfig.otherInterests : [],
         });
     };
 
@@ -248,71 +244,74 @@ const CreateTrip = () => {
         return tripConfig.adultCount + tripConfig.childCount;
     };
 
+    useEffect(() => {
+        setTripConfig(prev => ({ ...prev, travelerCount: getTotalTravelers() }));
+    }, [tripConfig.travelers, tripConfig.adultCount, tripConfig.childCount]);
+
+
     const canContinueFromInterests =
         tripConfig.interests.length > 0 &&
         (!tripConfig.interests.includes("Others") ||
-            tripConfig.otherInterest.trim().length > 0);
+            (tripConfig.otherInterests.length > 0 && tripConfig.otherInterests.every(i => i.trim() !== "")));
+
 
     const handleBuildItinerary = async () => {
-        setSaveError("");
+        setApiError("");
+        setIsGenerating(true);
 
-        const storedUserId = localStorage.getItem("voyexa_user_id");
-        if (!storedUserId) {
-            setSaveError("Please login again. Missing user session.");
-            return;
-        }
-
-        let adultCount = tripConfig.adultCount;
-        let childCount = tripConfig.childCount;
-
-        if (tripConfig.travelers === "Solo") {
-            adultCount = 1;
-            childCount = 0;
-        } else if (tripConfig.travelers === "Couple") {
-            adultCount = 2;
-            childCount = 0;
-        }
+        const otherInterestsArray = Array.isArray(tripConfig.otherInterests)
+            ? tripConfig.otherInterests
+            : (tripConfig.otherInterests ? tripConfig.otherInterests.split(',').map(s => s.trim()) : []);
 
         const payload = {
-            userId: Number(storedUserId),
             origin: tripConfig.origin,
             destination: tripConfig.destination,
             startDate: tripConfig.startDate,
             endDate: tripConfig.endDate,
-            dateFlexibility: tripConfig.dateFlexibility,
+            flexibility: tripConfig.flexibility,
             travelers: tripConfig.travelers,
-            adultCount,
-            childCount,
-            interests: tripConfig.interests,
-            otherInterest: tripConfig.otherInterest,
-            accommodationPreference: tripConfig.accommodationPreference,
-            tripPace: tripConfig.tripPace,
-            budget: tripConfig.budget
+            travelerCount: tripConfig.travelerCount,
+            budget: tripConfig.budget,
+            accommodationType: tripConfig.accommodationType,
+            travelPace: tripConfig.travelPace,
+            interests: tripConfig.interests.filter(i => i !== "Others"),
+            otherInterests: otherInterestsArray,
+            promptMetadata: {
+                promptVersion: "2.0",
+                responseFormat: "json",
+                strictJsonOnly: true,
+                locale: "en-US",
+                currency: "USD",
+                notes: "Web client request"
+            }
         };
 
-        setIsSaving(true);
         try {
-            const response = await fetch("http://localhost:8080/api/trips", {
+            const response = await fetch("http://localhost:8080/api/trips/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
 
-            const contentType = response.headers.get("content-type") || "";
-            const data = contentType.includes("application/json")
-                ? await response.json()
-                : { message: await response.text() };
+            const responseText = await response.text();
 
             if (!response.ok) {
-                setSaveError(data?.message || "Failed to save trip.");
+                try {
+                    const errorJson = JSON.parse(responseText);
+                    setApiError(errorJson.error || "An unknown API error occurred.");
+                } catch (e) {
+                    setApiError(`Server returned an error: ${response.status} ${response.statusText}`);
+                }
                 return;
             }
 
-            navigate("/dashboard");
+            // The response is expected to be a JSON string. We pass it directly.
+            navigate("/itinerary-result", { state: { itineraryJson: responseText } });
+
         } catch (e) {
-            setSaveError("Network error: unable to save trip.");
+            setApiError("Network error: Unable to connect to the AI service.");
         } finally {
-            setIsSaving(false);
+            setIsGenerating(false);
         }
     };
 
@@ -416,10 +415,10 @@ const CreateTrip = () => {
                                     <button
                                         key={option}
                                         onClick={() =>
-                                            setTripConfig({ ...tripConfig, dateFlexibility: option })
+                                            setTripConfig({ ...tripConfig, flexibility: option })
                                         }
                                         className={`p-4 rounded-2xl border-2 font-bold text-left transition-all ${
-                                            tripConfig.dateFlexibility === option
+                                            tripConfig.flexibility === option
                                                 ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
                                                 : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
                                         }`}
@@ -439,17 +438,7 @@ const CreateTrip = () => {
                                     <button
                                         key={opt.id}
                                         onClick={() =>
-                                            setTripConfig((prev) => {
-                                                if (opt.id === "Solo" || opt.id === "Couple") {
-                                                    return { ...prev, travelers: opt.id };
-                                                }
-                                                return {
-                                                    ...prev,
-                                                    travelers: opt.id,
-                                                    adultCount: Math.max(prev.adultCount, 1),
-                                                    childCount: Math.max(prev.childCount, 0)
-                                                };
-                                            })
+                                            setTripConfig((prev) => ({ ...prev, travelers: opt.id }))
                                         }
                                         className={`p-5 rounded-2xl border-2 font-bold text-left transition-all flex items-center gap-4 ${
                                             tripConfig.travelers === opt.id
@@ -462,19 +451,6 @@ const CreateTrip = () => {
                                 ))}
                             </div>
                         </div>
-
-                        {(tripConfig.travelers === "Solo" ||
-                            tripConfig.travelers === "Couple") && (
-                            <div className="animate-in fade-in zoom-in duration-300 p-6 bg-white/5 border border-white/10 rounded-2xl mb-6">
-                                <h4 className="text-white font-bold mb-1">Traveler Count</h4>
-                                <p className="text-indigo-300 font-semibold">
-                                    {tripConfig.travelers === "Solo" ? "1 traveler" : "2 travelers"}
-                                </p>
-                                <p className="text-xs text-slate-500 mt-1">
-                                    Count is fixed for this selection.
-                                </p>
-                            </div>
-                        )}
 
                         {(tripConfig.travelers === "Family" ||
                             tripConfig.travelers === "Friends") && (
@@ -533,7 +509,7 @@ const CreateTrip = () => {
 
                         <div className="mb-10 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
                             <p className="text-sm text-indigo-300 font-semibold">
-                                Total Travelers: {getTotalTravelers()}
+                                Total Travelers: {tripConfig.travelerCount}
                             </p>
                         </div>
 
@@ -598,14 +574,14 @@ const CreateTrip = () => {
                         {tripConfig.interests.includes("Others") && (
                             <div className="mb-10">
                                 <label className="text-xs font-black text-slate-500 uppercase tracking-widest px-1 block mb-3">
-                                    Other interests (keywords)
+                                    Other interests (comma-separated)
                                 </label>
                                 <input
                                     type="text"
                                     placeholder="e.g. photography, wellness, live music"
-                                    value={tripConfig.otherInterest}
+                                    value={tripConfig.otherInterests.join(', ')}
                                     onChange={(e) =>
-                                        setTripConfig({ ...tripConfig, otherInterest: e.target.value })
+                                        setTripConfig({ ...tripConfig, otherInterests: e.target.value.split(',').map(s => s.trim()) })
                                     }
                                     className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-base text-white outline-none focus:border-indigo-500 placeholder:text-slate-600 transition-all"
                                 />
@@ -651,11 +627,11 @@ const CreateTrip = () => {
                                         onClick={() =>
                                             setTripConfig({
                                                 ...tripConfig,
-                                                accommodationPreference: option
+                                                accommodationType: option
                                             })
                                         }
                                         className={`p-4 rounded-2xl border-2 font-bold text-left transition-all ${
-                                            tripConfig.accommodationPreference === option
+                                            tripConfig.accommodationType === option
                                                 ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
                                                 : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
                                         }`}
@@ -674,9 +650,9 @@ const CreateTrip = () => {
                                 {tripPaceOptions.map((option) => (
                                     <button
                                         key={option}
-                                        onClick={() => setTripConfig({ ...tripConfig, tripPace: option })}
+                                        onClick={() => setTripConfig({ ...tripConfig, travelPace: option })}
                                         className={`p-4 rounded-2xl border-2 font-bold text-center transition-all ${
-                                            tripConfig.tripPace === option
+                                            tripConfig.travelPace === option
                                                 ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
                                                 : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
                                         }`}
@@ -726,13 +702,13 @@ const CreateTrip = () => {
                             ))}
                         </div>
 
-                        {saveError && (
-                            <div className="w-full mb-4 text-red-200 bg-red-900/30 p-3 rounded-xl text-xs font-bold border border-red-500/20">
-                                {saveError}
+                        {apiError && (
+                            <div className="w-full mb-4 text-red-200 bg-red-900/30 p-3 rounded-xl text-sm font-bold border border-red-500/20">
+                                {apiError}
                             </div>
                         )}
 
-                        <div className="flex gap-4 mt-12">
+                        <div className="flex gap-4 mt-4">
                             <button
                                 onClick={() => setStep(5)}
                                 className="flex-1 py-5 rounded-2xl font-bold text-slate-400 hover:text-white transition-all"
@@ -741,10 +717,19 @@ const CreateTrip = () => {
                             </button>
                             <button
                                 onClick={handleBuildItinerary}
-                                disabled={isSaving}
+                                disabled={isGenerating}
                                 className="flex-[2] bg-indigo-600 text-white py-6 rounded-2xl font-black text-xl flex items-center justify-center gap-3 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-500/40 disabled:opacity-60 disabled:cursor-not-allowed"
                             >
-                                <Sparkles size={24} /> {isSaving ? "SAVING..." : "BUILD ITINERARY"}
+                                {isGenerating ? (
+                                    <>
+                                        <div className="w-6 h-6 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
+                                        <span>GENERATING...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles size={24} /> BUILD ITINERARY
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
