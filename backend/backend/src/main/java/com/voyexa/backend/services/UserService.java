@@ -6,6 +6,9 @@ import com.voyexa.backend.DTOS.UserLoginDto;
 import com.voyexa.backend.entities.User;
 import com.voyexa.backend.exceptions.DuplicateUserException;
 import com.voyexa.backend.repositories.UserRepository;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -18,9 +21,15 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       AuthenticationManager authenticationManager) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
     }
 
     public String registerUser(UserRegistrationDto dto) {
@@ -41,7 +50,7 @@ public class UserService {
         User user = new User();
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
-        user.setPassword(dto.getPassword());
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setPhone_number(dto.getPhone_number());
         user.setCreated_at(LocalDateTime.now());
         user.setUpdated_at(LocalDateTime.now());
@@ -51,15 +60,13 @@ public class UserService {
     }
 
     public UserLoginResponseDto loginUser(UserLoginDto dto) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getPassword())
+        );
+
         Optional<User> userOpt = userRepository.findByEmail(dto.getEmail());
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            if (user.getPassword().equals(dto.getPassword())) {
-                return new UserLoginResponseDto(user.getUser_id(), user.getName(), "Login successful.");
-            }
-            throw new IllegalArgumentException("Invalid password.");
-        }
-        throw new IllegalArgumentException("User not found.");
+        User user = userOpt.orElseThrow(() -> new IllegalArgumentException("User not found."));
+        return new UserLoginResponseDto(user.getUser_id(), user.getName(), "Login successful.");
     }
 
     public List<User> getAllUsers() {
