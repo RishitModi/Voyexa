@@ -5,6 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -15,28 +19,28 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 @Service
-public class PixabayImageService {
+public class PexelsImageService {
 
-    private static final Logger log = LoggerFactory.getLogger(PixabayImageService.class);
+    private static final Logger log = LoggerFactory.getLogger(PexelsImageService.class);
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-    private final String pixabayApiKey;
+    private final String pexelsApiKey;
 
-    public PixabayImageService(@Value("${pixabay.api-key}") String pixabayApiKey) {
+    public PexelsImageService(@Value("${pexels.api-key:YOUR_PEXELS_API_KEY}") String pexelsApiKey) {
         this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
-        this.pixabayApiKey = pixabayApiKey;
+        this.pexelsApiKey = pexelsApiKey;
     }
 
     /**
-     * Fetches a relevant image from Pixabay based on search terms.
+     * Fetches a relevant image from Pexels based on search terms.
      * @param query The search terms (e.g. "Eiffel Tower Paris")
      * @return A URL string of the image, or a fallback default image if none found.
      */
     public String fetchImageForActivity(String query) {
-        if (pixabayApiKey == null || pixabayApiKey.isBlank() || pixabayApiKey.startsWith("YOUR_")) {
-            log.warn("Pixabay API key not configured. Using fallback image.");
+        if (pexelsApiKey == null || pexelsApiKey.isBlank() || pexelsApiKey.startsWith("YOUR_")) {
+            log.warn("Pexels API key not configured. Using fallback image.");
             return getDefaultImage();
         }
 
@@ -48,23 +52,25 @@ public class PixabayImageService {
             }
 
             URI uri = UriComponentsBuilder
-                    .fromUriString("https://pixabay.com/api/")
-                    .queryParam("key", pixabayApiKey)
-                    .queryParam("q", URLEncoder.encode(cleanedQuery, StandardCharsets.UTF_8))
-                    .queryParam("image_type", "photo")
-                    .queryParam("orientation", "horizontal")
+                    .fromUriString("https://api.pexels.com/v1/search")
+                    .queryParam("query", URLEncoder.encode(cleanedQuery, StandardCharsets.UTF_8))
+                    .queryParam("orientation", "landscape")
                     .queryParam("per_page", 3) // Fetch a few to pick the best/first
                     .build(true)
                     .toUri();
 
-            String response = restTemplate.getForObject(uri, String.class);
-            return parseImageUrl(response);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", pexelsApiKey);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.GET, entity, String.class);
+            return parseImageUrl(response.getBody());
 
         } catch (RestClientException e) {
-            log.warn("Error calling Pixabay API for query '{}': {}", query, e.getMessage());
+            log.warn("Error calling Pexels API for query '{}': {}", query, e.getMessage());
             return getDefaultImage();
         } catch (Exception e) {
-            log.error("Unexpected error fetching image from Pixabay", e);
+            log.error("Unexpected error fetching image from Pexels", e);
             return getDefaultImage();
         }
     }
@@ -76,22 +82,28 @@ public class PixabayImageService {
 
         try {
             JsonNode rootNode = objectMapper.readTree(jsonResponse);
-            JsonNode hits = rootNode.path("hits");
+            JsonNode photos = rootNode.path("photos");
 
-            if (hits.isArray() && hits.size() > 0) {
-                // Return the best quality reasonable image (largeImageURL or webformatURL)
-                JsonNode firstHit = hits.get(0);
-                String largeUrl = firstHit.path("largeImageURL").asText(null);
+            if (photos.isArray() && photos.size() > 0) {
+                // Return a reasonably sized image
+                JsonNode firstHit = photos.get(0);
+                JsonNode src = firstHit.path("src");
+                
+                String largeUrl = src.path("large").asText(null);
                 if (largeUrl != null && !largeUrl.isEmpty()) {
                     return largeUrl;
                 }
-                String webUrl = firstHit.path("webformatURL").asText(null);
-                if (webUrl != null && !webUrl.isEmpty()) {
-                    return webUrl;
+                String mediumUrl = src.path("medium").asText(null);
+                if (mediumUrl != null && !mediumUrl.isEmpty()) {
+                    return mediumUrl;
+                }
+                String originalUrl = src.path("original").asText(null);
+                if (originalUrl != null && !originalUrl.isEmpty()) {
+                    return originalUrl;
                 }
             }
         } catch (Exception e) {
-            log.warn("Failed to parse Pixabay response: {}", e.getMessage());
+            log.warn("Failed to parse Pexels response: {}", e.getMessage());
         }
 
         return getDefaultImage();

@@ -31,20 +31,20 @@ public class ItineraryService {
     private final String plannerApiKey;
     private final String validatorApiKey;
     private final String geminiApiUrl;
-    private final PixabayImageService pixabayImageService;
+    private final PexelsImageService pexelsImageService;
     private final ObjectMapper objectMapper;
 
     public ItineraryService(
             @Value("${gemini.api.planner-key}") String plannerApiKey,
             @Value("${gemini.api.validator-key}") String validatorApiKey,
             @Value("${gemini.api.url}") String geminiApiUrl,
-            PixabayImageService pixabayImageService
+            PexelsImageService pexelsImageService
     ) {
         this.restTemplate = new RestTemplate();
         this.plannerApiKey = plannerApiKey;
         this.validatorApiKey = validatorApiKey;
         this.geminiApiUrl = geminiApiUrl;
-        this.pixabayImageService = pixabayImageService;
+        this.pexelsImageService = pexelsImageService;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -73,8 +73,8 @@ public class ItineraryService {
             log.info("Validator Agent responded.");
         }
 
-        // Step 5: Asynchronously fetch and inject Pixabay images for each activity tree
-        log.info("Injecting dynamic images from Pixabay...");
+        // Step 5: Asynchronously fetch and inject Pexels images for each activity tree
+        log.info("Injecting dynamic images from Pexels...");
         return injectImagesIntoItinerary(finalJsonResponse);
     }
 
@@ -138,7 +138,7 @@ public class ItineraryService {
                             if (!title.isEmpty()) {
                                 String query = title + " " + location;
                                 java.util.concurrent.CompletableFuture<Void> future = java.util.concurrent.CompletableFuture.runAsync(() -> {
-                                    String imageUrl = pixabayImageService.fetchImageForActivity(query);
+                                    String imageUrl = pexelsImageService.fetchImageForActivity(query);
                                     ((ObjectNode) activityNode).put("imageUrl", imageUrl);
                                 });
                                 futures.add(future);
