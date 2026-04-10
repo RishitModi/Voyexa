@@ -27,5 +27,5 @@ gemini:
     validator-key: ${GEMINI_VALIDATOR_API_KEY}
     url: https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent
 
-pixabay:
-  api-key: ${PIXABAY_API_KEY}
+pexels:
+  api-key: ${PEXELS_API_KEY:YOUR_PEXELS_API_KEY}
