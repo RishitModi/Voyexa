@@ -12,5 +12,8 @@
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-autoconfigure:4.0.3" level="project" />
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot:4.0.3" level="project" />
     <orderEntry type="library" name="Maven: org.springframework:spring-context:7.0.5" level="project" />
+    <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:2.0.17" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-beans:7.0.5" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-web:7.0.5" level="project" />
   </component>
 </module>
