@@ -1,5 +1,8 @@
 package com.voyexa.backend.services;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.voyexa.backend.DTOS.TripGenerationRequestDto;
 import lombok.Data;
 import lombok.Getter;
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -27,16 +31,21 @@ public class ItineraryService {
     private final String plannerApiKey;
     private final String validatorApiKey;
     private final String geminiApiUrl;
+    private final PixabayImageService pixabayImageService;
+    private final ObjectMapper objectMapper;
 
     public ItineraryService(
             @Value("${gemini.api.planner-key}") String plannerApiKey,
             @Value("${gemini.api.validator-key}") String validatorApiKey,
-            @Value("${gemini.api.url}") String geminiApiUrl
+            @Value("${gemini.api.url}") String geminiApiUrl,
+            PixabayImageService pixabayImageService
     ) {
         this.restTemplate = new RestTemplate();
         this.plannerApiKey = plannerApiKey;
         this.validatorApiKey = validatorApiKey;
         this.geminiApiUrl = geminiApiUrl;
+        this.pixabayImageService = pixabayImageService;
+        this.objectMapper = new ObjectMapper();
     }
 
     public String generateItinerary(TripGenerationRequestDto requestDto) {
@@ -59,12 +68,14 @@ public class ItineraryService {
         String finalJsonResponse = callAiModel(validatorPrompt, validatorApiKey);
         if (finalJsonResponse == null || finalJsonResponse.isBlank()) {
             log.error("Validator agent returned an empty or null response. Returning planner response as fallback.");
-            return plannerResponseJson; // Fallback to the planner's response
+            finalJsonResponse = plannerResponseJson; // Fallback to the planner's response
+        } else {
+            log.info("Validator Agent responded.");
         }
-        log.info("Validator Agent responded.");
 
-        // Step 5: Return the validated JSON
-        return finalJsonResponse;
+        // Step 5: Asynchronously fetch and inject Pixabay images for each activity tree
+        log.info("Injecting dynamic images from Pixabay...");
+        return injectImagesIntoItinerary(finalJsonResponse);
     }
 
     private String callAiModel(String prompt, String apiKey) {
@@ -104,6 +115,48 @@ public class ItineraryService {
     private String cleanApiResponse(String rawText) {
         // The API sometimes wraps the JSON in markdown code fences. Remove them.
         return rawText.replace("```json", "").replace("```", "").trim();
+    }
+    
+    private String injectImagesIntoItinerary(String json) {
+        try {
+            JsonNode root = objectMapper.readTree(json);
+            JsonNode itineraryArray = root.path("itinerary");
+            if (!itineraryArray.isArray()) return json;
+
+            List<java.util.concurrent.CompletableFuture<Void>> futures = new ArrayList<>();
+
+            for (JsonNode dayNode : itineraryArray) {
+                String[] times = {"morning", "afternoon", "evening"};
+                for (String time : times) {
+                    JsonNode timeNode = dayNode.path(time);
+                    if (timeNode.isObject()) {
+                        JsonNode activityNode = timeNode.path("activity");
+                        if (activityNode.isObject()) {
+                            String title = activityNode.path("title").asText("");
+                            String location = activityNode.path("location").asText("");
+                            
+                            if (!title.isEmpty()) {
+                                String query = title + " " + location;
+                                java.util.concurrent.CompletableFuture<Void> future = java.util.concurrent.CompletableFuture.runAsync(() -> {
+                                    String imageUrl = pixabayImageService.fetchImageForActivity(query);
+                                    ((ObjectNode) activityNode).put("imageUrl", imageUrl);
+                                });
+                                futures.add(future);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Wait for all image fetching to complete
+            java.util.concurrent.CompletableFuture.allOf(futures.toArray(new java.util.concurrent.CompletableFuture[0])).join();
+
+            return objectMapper.writeValueAsString(root);
+
+        } catch (Exception e) {
+            log.error("Failed to inject images into itinerary JSON", e);
+            return json; 
+        }
     }
 
     //<editor-fold desc="Prompt Building and DTOs">

@@ -38,34 +38,42 @@ const ItineraryResult = () => {
         return (
             <div className="relative pl-8 pb-10 border-l-2 border-white/10 last:border-0 last:pb-0">
                 <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-slate-950 shadow-[0_0_15px_rgba(59,130,246,0.6)] ${colorClass} z-10`} />
-                <div className="bg-slate-900/95 backdrop-blur-md rounded-2xl p-6 border border-white/10 hover:border-blue-500/50 transition-all duration-300 group shadow-xl">
-                    <div className="flex items-center gap-2 mb-3">
-                        <Icon size={16} className="text-blue-400" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400/70">{section}</span>
-                    </div>
-                    <h4 className="text-xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors tracking-tight">
-                        {data.activity.title}
-                    </h4>
-                    <p className="text-slate-300 text-sm leading-relaxed mb-4 font-medium">
-                        {data.activity.description}
-                    </p>
-
-                    <div className="flex flex-wrap gap-4 text-[11px] font-bold text-slate-400">
-                        <div className="flex items-center gap-1.5 bg-slate-800/50 px-2 py-1 rounded-md border border-white/5">
-                            <MapPin size={14} className="text-rose-500" />
-                            {data.activity.location}
+                <div className="bg-slate-900/95 backdrop-blur-md rounded-2xl border border-white/10 hover:border-blue-500/50 transition-all duration-300 group shadow-xl overflow-hidden">
+                    {data.activity.imageUrl && (
+                        <div className="w-full h-48 relative overflow-hidden">
+                            <img src={data.activity.imageUrl} alt={data.activity.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent"></div>
                         </div>
-                        {data.estimatedTime && (
+                    )}
+                    <div className="p-6 relative z-10">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Icon size={16} className="text-blue-400" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400/70">{section}</span>
+                        </div>
+                        <h4 className="text-xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors tracking-tight">
+                            {data.activity.title}
+                        </h4>
+                        <p className="text-slate-300 text-sm leading-relaxed mb-4 font-medium">
+                            {data.activity.description}
+                        </p>
+    
+                        <div className="flex flex-wrap gap-4 text-[11px] font-bold text-slate-400">
                             <div className="flex items-center gap-1.5 bg-slate-800/50 px-2 py-1 rounded-md border border-white/5">
-                                <Clock size={14} />
-                                {data.estimatedTime}
+                                <MapPin size={14} className="text-rose-500" />
+                                {data.activity.location}
                             </div>
-                        )}
-                        {data.costTier && (
-                            <span className="text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-md border border-emerald-400/20">
-                                {data.costTier}
-                            </span>
-                        )}
+                            {data.estimatedTime && (
+                                <div className="flex items-center gap-1.5 bg-slate-800/50 px-2 py-1 rounded-md border border-white/5">
+                                    <Clock size={14} />
+                                    {data.estimatedTime}
+                                </div>
+                            )}
+                            {data.costTier && (
+                                <span className="text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-md border border-emerald-400/20">
+                                    {data.costTier}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
