@@ -1,16 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     Calendar, MapPin, Clock, Info, ArrowLeft,
     Hotel, Sparkles, Sunrise, Sun, Sunset,
-    Lightbulb, Share2, Download
+    Lightbulb, Share2, Download, Check
 } from 'lucide-react';
 import FloatingLines from '../components/FloatingLines';
 
 const ItineraryResult = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { itineraryJson } = location.state || {};
+    const { tripId, itineraryJson } = location.state || {};
+    const [isSaving, setIsSaving] = useState(false);
+    const [isSaved, setIsSaved] = useState(false);
 
     let itineraryData = null;
     try {
@@ -32,6 +34,50 @@ const ItineraryResult = () => {
             </div>
         );
     }
+
+    /**
+     * Deep-clones the parsed itinerary and strips all imageUrl fields before
+     * sending to the backend — keeps the DB row lightweight.
+     */
+    const stripImages = (data) => {
+        const clone = JSON.parse(JSON.stringify(data));
+        if (Array.isArray(clone.itinerary)) {
+            clone.itinerary.forEach(day => {
+                ['morning', 'afternoon', 'evening'].forEach(period => {
+                    if (day[period]?.activity?.imageUrl !== undefined) {
+                        delete day[period].activity.imageUrl;
+                    }
+                });
+            });
+        }
+        return clone;
+    };
+
+    const handleSaveTrip = async () => {
+        if (!tripId) {
+            alert('Unable to save: trip ID is missing. Please generate the itinerary again.');
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const pruned = stripImages(itineraryData);
+            const response = await fetch(`http://localhost:8080/api/trips/${tripId}/itinerary`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(pruned)
+            });
+            if (response.ok) {
+                setIsSaved(true);
+                alert('Trip saved! You can now view it in the My Trips page of your dashboard.');
+            } else {
+                alert('Something went wrong while saving. Please try again.');
+            }
+        } catch (e) {
+            alert('Network error: Unable to reach the server. Please check your connection.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const ActivityCard = ({ section, data, icon: Icon, colorClass }) => {
         if (!data || !data.activity) return null;
@@ -56,7 +102,7 @@ const ItineraryResult = () => {
                         <p className="text-slate-300 text-sm leading-relaxed mb-4 font-medium">
                             {data.activity.description}
                         </p>
-    
+
                         <div className="flex flex-wrap gap-4 text-[11px] font-bold text-slate-400">
                             <div className="flex items-center gap-1.5 bg-slate-800/50 px-2 py-1 rounded-md border border-white/5">
                                 <MapPin size={14} className="text-rose-500" />
@@ -91,15 +137,28 @@ const ItineraryResult = () => {
                 {/* Navbar */}
                 <nav className="sticky top-0 w-full border-b border-white/5 bg-slate-950/80 backdrop-blur-xl px-6 py-4 flex items-center justify-between">
                     <button onClick={() => navigate('/create-trip')} className="flex items-center gap-2 text-slate-400 hover:text-white transition group">
-                        <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform"/>
+                        <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
                         <span className="font-bold tracking-tight">Voyexa Planner</span>
                     </button>
                     <div className="flex gap-3">
                         <button className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition text-slate-300">
                             <Share2 size={18} />
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold text-sm transition shadow-lg shadow-blue-900/40">
-                            <Download size={18} /> Save Trip
+                        <button
+                            onClick={handleSaveTrip}
+                            disabled={isSaving || isSaved}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition shadow-lg disabled:cursor-not-allowed ${isSaved
+                                    ? 'bg-emerald-600 shadow-emerald-900/40 opacity-80'
+                                    : 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/40'
+                                }`}
+                        >
+                            {isSaving ? (
+                                <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Saving...</>
+                            ) : isSaved ? (
+                                <><Check size={18} /> Saved!</>
+                            ) : (
+                                <><Download size={18} /> Save Trip</>
+                            )}
                         </button>
                     </div>
                 </nav>

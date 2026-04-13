@@ -17,19 +17,19 @@ import {
 } from "lucide-react";
 
 const LocationAutocomplete = ({
-                                  icon: Icon,
-                                  title,
-                                  subtitle,
-                                  placeholder,
-                                  value,
-                                  onChange,
-                                  onNext,
-                                  onBack,
-                                  nextLabel = "Continue",
-                                  nextDisabled = false,
-                                  showBackButton = true,
-                                  themeColor = "indigo"
-                              }) => {
+    icon: Icon,
+    title,
+    subtitle,
+    placeholder,
+    value,
+    onChange,
+    onNext,
+    onBack,
+    nextLabel = "Continue",
+    nextDisabled = false,
+    showBackButton = true,
+    themeColor = "indigo"
+}) => {
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -95,9 +95,8 @@ const LocationAutocomplete = ({
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
             <div
-                className={`${theme.iconBg} w-16 h-16 rounded-[1.5rem] flex items-center justify-center ${theme.iconText} mb-8 ${
-                    themeColor === "indigo" ? "shadow-lg shadow-indigo-500/20" : ""
-                }`}
+                className={`${theme.iconBg} w-16 h-16 rounded-[1.5rem] flex items-center justify-center ${theme.iconText} mb-8 ${themeColor === "indigo" ? "shadow-lg shadow-indigo-500/20" : ""
+                    }`}
             >
                 <Icon size={32} />
             </div>
@@ -135,9 +134,9 @@ const LocationAutocomplete = ({
                                 }}
                                 className="w-full text-left px-6 py-4 hover:bg-white/5 transition-colors border-b border-white/5 flex flex-col"
                             >
-                <span className="font-bold text-white">
-                  {place.description || place.name}
-                </span>
+                                <span className="font-bold text-white">
+                                    {place.description || place.name}
+                                </span>
                             </button>
                         ))}
                     </div>
@@ -168,7 +167,7 @@ const LocationAutocomplete = ({
 const CreateTrip = () => {
     const navigate = useNavigate();
     const { state } = useLocation();
-    
+
     const [step, setStep] = useState(1);
     const [isGenerating, setIsGenerating] = useState(false);
     const [apiError, setApiError] = useState("");
@@ -318,9 +317,8 @@ const CreateTrip = () => {
                 body: JSON.stringify(payload)
             });
 
-            const responseText = await response.text();
-
             if (!response.ok) {
+                const responseText = await response.text();
                 try {
                     const errorJson = JSON.parse(responseText);
                     setApiError(errorJson.error || "An unknown API error occurred.");
@@ -330,8 +328,14 @@ const CreateTrip = () => {
                 return;
             }
 
-            // The response is expected to be a JSON string. We pass it directly.
-            navigate("/itinerary-result", { state: { itineraryJson: responseText } });
+            // The backend now returns { tripId, itineraryJson } as a JSON object.
+            const data = await response.json();
+            navigate("/itinerary-result", {
+                state: {
+                    tripId: data.tripId,
+                    itineraryJson: data.itineraryJson
+                }
+            });
 
         } catch (e) {
             setApiError("Network error: Unable to connect to the AI service.");
@@ -445,11 +449,10 @@ const CreateTrip = () => {
                                         onClick={() =>
                                             setTripConfig({ ...tripConfig, flexibility: option })
                                         }
-                                        className={`p-4 rounded-2xl border-2 font-bold text-left transition-all ${
-                                            tripConfig.flexibility === option
+                                        className={`p-4 rounded-2xl border-2 font-bold text-left transition-all ${tripConfig.flexibility === option
                                                 ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
                                                 : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
-                                        }`}
+                                            }`}
                                     >
                                         {option}
                                     </button>
@@ -468,11 +471,10 @@ const CreateTrip = () => {
                                         onClick={() =>
                                             setTripConfig((prev) => ({ ...prev, travelers: opt.id }))
                                         }
-                                        className={`p-5 rounded-2xl border-2 font-bold text-left transition-all flex items-center gap-4 ${
-                                            tripConfig.travelers === opt.id
+                                        className={`p-5 rounded-2xl border-2 font-bold text-left transition-all flex items-center gap-4 ${tripConfig.travelers === opt.id
                                                 ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
                                                 : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
-                                        }`}
+                                            }`}
                                     >
                                         {opt.icon} {opt.label}
                                     </button>
@@ -482,58 +484,58 @@ const CreateTrip = () => {
 
                         {(tripConfig.travelers === "Family" ||
                             tripConfig.travelers === "Friends") && (
-                            <div className="animate-in fade-in zoom-in duration-300 p-6 bg-white/5 border border-white/10 rounded-2xl mb-6 space-y-5">
-                                <div className="text-white font-bold">Traveler Count</div>
+                                <div className="animate-in fade-in zoom-in duration-300 p-6 bg-white/5 border border-white/10 rounded-2xl mb-6 space-y-5">
+                                    <div className="text-white font-bold">Traveler Count</div>
 
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h4 className="text-white font-semibold">Adults</h4>
-                                        <p className="text-xs text-slate-500">Age 13+</p>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h4 className="text-white font-semibold">Adults</h4>
+                                            <p className="text-xs text-slate-500">Age 13+</p>
+                                        </div>
+                                        <div className="flex items-center gap-6">
+                                            <button
+                                                onClick={() => updateCounter("adultCount", -1, 1, 20)}
+                                                className="p-2 bg-white/10 text-white rounded-lg hover:bg-indigo-600 transition-all"
+                                            >
+                                                <Minus size={18} />
+                                            </button>
+                                            <span className="text-2xl font-black text-white w-8 text-center">
+                                                {tripConfig.adultCount}
+                                            </span>
+                                            <button
+                                                onClick={() => updateCounter("adultCount", 1, 1, 20)}
+                                                className="p-2 bg-white/10 text-white rounded-lg hover:bg-indigo-600 transition-all"
+                                            >
+                                                <Plus size={18} />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-6">
-                                        <button
-                                            onClick={() => updateCounter("adultCount", -1, 1, 20)}
-                                            className="p-2 bg-white/10 text-white rounded-lg hover:bg-indigo-600 transition-all"
-                                        >
-                                            <Minus size={18} />
-                                        </button>
-                                        <span className="text-2xl font-black text-white w-8 text-center">
-                      {tripConfig.adultCount}
-                    </span>
-                                        <button
-                                            onClick={() => updateCounter("adultCount", 1, 1, 20)}
-                                            className="p-2 bg-white/10 text-white rounded-lg hover:bg-indigo-600 transition-all"
-                                        >
-                                            <Plus size={18} />
-                                        </button>
+
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h4 className="text-white font-semibold">Children</h4>
+                                            <p className="text-xs text-slate-500">Age 0-12</p>
+                                        </div>
+                                        <div className="flex items-center gap-6">
+                                            <button
+                                                onClick={() => updateCounter("childCount", -1, 0, 20)}
+                                                className="p-2 bg-white/10 text-white rounded-lg hover:bg-indigo-600 transition-all"
+                                            >
+                                                <Minus size={18} />
+                                            </button>
+                                            <span className="text-2xl font-black text-white w-8 text-center">
+                                                {tripConfig.childCount}
+                                            </span>
+                                            <button
+                                                onClick={() => updateCounter("childCount", 1, 0, 20)}
+                                                className="p-2 bg-white/10 text-white rounded-lg hover:bg-indigo-600 transition-all"
+                                            >
+                                                <Plus size={18} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h4 className="text-white font-semibold">Children</h4>
-                                        <p className="text-xs text-slate-500">Age 0-12</p>
-                                    </div>
-                                    <div className="flex items-center gap-6">
-                                        <button
-                                            onClick={() => updateCounter("childCount", -1, 0, 20)}
-                                            className="p-2 bg-white/10 text-white rounded-lg hover:bg-indigo-600 transition-all"
-                                        >
-                                            <Minus size={18} />
-                                        </button>
-                                        <span className="text-2xl font-black text-white w-8 text-center">
-                      {tripConfig.childCount}
-                    </span>
-                                        <button
-                                            onClick={() => updateCounter("childCount", 1, 0, 20)}
-                                            className="p-2 bg-white/10 text-white rounded-lg hover:bg-indigo-600 transition-all"
-                                        >
-                                            <Plus size={18} />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                            )}
 
                         <div className="mb-10 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
                             <p className="text-sm text-indigo-300 font-semibold">
@@ -578,22 +580,20 @@ const CreateTrip = () => {
                                     <button
                                         key={interest}
                                         onClick={() => toggleInterest(interest)}
-                                        className={`p-4 rounded-2xl border-2 font-bold text-left transition-all flex items-center justify-between ${
-                                            isSelected
+                                        className={`p-4 rounded-2xl border-2 font-bold text-left transition-all flex items-center justify-between ${isSelected
                                                 ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
                                                 : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
-                                        }`}
+                                            }`}
                                     >
                                         <span>{interest}</span>
                                         <span
-                                            className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs ${
-                                                isSelected
+                                            className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs ${isSelected
                                                     ? "border-indigo-400 bg-indigo-500/30 text-indigo-300"
                                                     : "border-slate-500/50 text-transparent"
-                                            }`}
+                                                }`}
                                         >
-                      ✓
-                    </span>
+                                            ✓
+                                        </span>
                                     </button>
                                 );
                             })}
@@ -658,11 +658,10 @@ const CreateTrip = () => {
                                                 accommodationType: option
                                             })
                                         }
-                                        className={`p-4 rounded-2xl border-2 font-bold text-left transition-all ${
-                                            tripConfig.accommodationType === option
+                                        className={`p-4 rounded-2xl border-2 font-bold text-left transition-all ${tripConfig.accommodationType === option
                                                 ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
                                                 : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
-                                        }`}
+                                            }`}
                                     >
                                         {option}
                                     </button>
@@ -679,11 +678,10 @@ const CreateTrip = () => {
                                     <button
                                         key={option}
                                         onClick={() => setTripConfig({ ...tripConfig, travelPace: option })}
-                                        className={`p-4 rounded-2xl border-2 font-bold text-center transition-all ${
-                                            tripConfig.travelPace === option
+                                        className={`p-4 rounded-2xl border-2 font-bold text-center transition-all ${tripConfig.travelPace === option
                                                 ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
                                                 : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
-                                        }`}
+                                            }`}
                                     >
                                         {option}
                                     </button>
@@ -719,11 +717,10 @@ const CreateTrip = () => {
                                 <button
                                     key={b}
                                     onClick={() => setTripConfig({ ...tripConfig, budget: b })}
-                                    className={`p-6 rounded-2xl border-2 font-black text-left transition-all flex justify-between items-center ${
-                                        tripConfig.budget === b
+                                    className={`p-6 rounded-2xl border-2 font-black text-left transition-all flex justify-between items-center ${tripConfig.budget === b
                                             ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
                                             : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
-                                    }`}
+                                        }`}
                                 >
                                     {b} {tripConfig.budget === b && <Sparkles size={18} />}
                                 </button>

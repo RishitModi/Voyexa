@@ -2,6 +2,7 @@ package com.voyexa.backend.controller;
 
 import com.voyexa.backend.DTOS.PlaceDto;
 import com.voyexa.backend.DTOS.TripGenerationRequestDto;
+import com.voyexa.backend.DTOS.TripGenerationResponseDto;
 import com.voyexa.backend.DTOS.TripRequestDto;
 import com.voyexa.backend.DTOS.TripResponseDto;
 import com.voyexa.backend.services.ExternalPlaceService;
@@ -13,6 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/trips")
@@ -26,8 +29,7 @@ public class TripController {
     public TripController(
             ExternalPlaceService externalPlaceService,
             TripService tripService,
-            ItineraryService itineraryService
-    ) {
+            ItineraryService itineraryService) {
         this.externalPlaceService = externalPlaceService;
         this.tripService = tripService;
         this.itineraryService = itineraryService;
@@ -46,11 +48,31 @@ public class TripController {
     }
 
     @PostMapping("/generate")
-    public ResponseEntity<String> generateItinerary(@Valid @RequestBody TripGenerationRequestDto dto) {
-        // Persist user trip preferences from the same request even if itinerary storage is postponed.
-        tripService.createTripFromGenerationRequest(dto);
+    public ResponseEntity<TripGenerationResponseDto> generateItinerary(
+            @Valid @RequestBody TripGenerationRequestDto dto) {
+        // 1. Persist user trip preferences and retrieve the saved trip's ID.
+        TripResponseDto savedTrip = tripService.createTripFromGenerationRequest(dto);
 
+        // 2. Generate the itinerary JSON (with images injected for the frontend to
+        // display).
         String itineraryJson = itineraryService.generateItinerary(dto);
-        return ResponseEntity.ok(itineraryJson);
+
+        // 3. Return both tripId + itineraryJson so the frontend can display the result
+        // and later call PUT /{tripId}/itinerary to persist the user's chosen
+        // itinerary.
+        TripGenerationResponseDto response = new TripGenerationResponseDto(savedTrip.getTripId(), itineraryJson);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{tripId}/itinerary")
+    public ResponseEntity<Void> saveItinerary(
+            @PathVariable UUID tripId,
+            @RequestBody Map<String, Object> itineraryMap) {
+        try {
+            tripService.saveItineraryToTrip(tripId, itineraryMap);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 }
