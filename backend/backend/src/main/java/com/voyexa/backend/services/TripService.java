@@ -7,12 +7,15 @@ import com.voyexa.backend.entities.Trip;
 import com.voyexa.backend.entities.User;
 import com.voyexa.backend.repositories.TripRepository;
 import com.voyexa.backend.repositories.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class TripService {
@@ -82,7 +85,7 @@ public class TripService {
         return new TripResponseDto(saved.getId(), "Trip preferences saved.");
     }
 
-    public void createTripFromGenerationRequest(TripGenerationRequestDto dto) {
+    public TripResponseDto createTripFromGenerationRequest(TripGenerationRequestDto dto) {
         TripRequestDto tripRequestDto = new TripRequestDto();
         tripRequestDto.setUserId(dto.getUserId());
         tripRequestDto.setOrigin(dto.getOrigin());
@@ -107,12 +110,22 @@ public class TripService {
         }
 
         tripRequestDto.setInterests(dto.getInterests());
-        tripRequestDto.setOtherInterest(dto.getOtherInterests() == null ? null : String.join(", ", dto.getOtherInterests()));
+        tripRequestDto
+                .setOtherInterest(dto.getOtherInterests() == null ? null : String.join(", ", dto.getOtherInterests()));
         tripRequestDto.setAccommodationPreference(dto.getAccommodationType());
         tripRequestDto.setTripPace(dto.getTravelPace());
         tripRequestDto.setBudget(dto.getBudget());
 
-        createTrip(tripRequestDto);
+        return createTrip(tripRequestDto);
+    }
+
+    @Transactional
+    public void saveItineraryToTrip(UUID tripId, Map<String, Object> itineraryJson) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("Trip not found with id: " + tripId));
+        trip.setItineraryJson(itineraryJson);
+        trip.setStatus("COMPLETE");
+        tripRepository.save(trip);
     }
 
     private void validateDates(TripRequestDto dto) {
@@ -125,8 +138,7 @@ public class TripService {
         String normalized = travelers == null ? "" : travelers.trim().toLowerCase(Locale.ROOT);
         if (!ALLOWED_GROUPS.contains(normalized)) {
             throw new IllegalArgumentException(
-                    "Invalid travelers value. Allowed: " + Arrays.toString(ALLOWED_GROUPS.toArray())
-            );
+                    "Invalid travelers value. Allowed: " + Arrays.toString(ALLOWED_GROUPS.toArray()));
         }
         return normalized;
     }
