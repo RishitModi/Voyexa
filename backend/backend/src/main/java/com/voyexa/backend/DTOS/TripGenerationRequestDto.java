@@ -67,6 +67,9 @@ public class TripGenerationRequestDto {
     @NotNull
     private List<String> otherInterests = new ArrayList<>();
 
+    @NotNull
+    private List<Long> selectedProfileIds = new ArrayList<>();
+
     @Valid
     @NotNull
     private PromptMetadata promptMetadata = new PromptMetadata();

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.voyexa.backend.DTOS.TripGenerationRequestDto;
+import com.voyexa.backend.entities.TravelerProfile;
+import com.voyexa.backend.repositories.TravelerProfileRepository;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
@@ -24,6 +26,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 @Data
 @Service
 public class ItineraryService {
@@ -37,13 +40,15 @@ public class ItineraryService {
     private final Queue<String> validatorKeys = new ConcurrentLinkedQueue<>();
     private final String geminiApiUrl;
     private final PexelsImageService pexelsImageService;
+    private final TravelerProfileRepository travelerProfileRepository;
     private final ObjectMapper objectMapper;
 
     public ItineraryService(
             @Value("${gemini.api.planner-key}") String plannerApiKeyStr,
             @Value("${gemini.api.validator-key}") String validatorApiKeyStr,
             @Value("${gemini.api.url}") String geminiApiUrl,
-            PexelsImageService pexelsImageService
+            PexelsImageService pexelsImageService,
+            TravelerProfileRepository travelerProfileRepository
     ) {
         this.restTemplate = new RestTemplate();
         
@@ -66,6 +71,7 @@ public class ItineraryService {
 
         this.geminiApiUrl = geminiApiUrl;
         this.pexelsImageService = pexelsImageService;
+        this.travelerProfileRepository = travelerProfileRepository;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -234,6 +240,7 @@ public class ItineraryService {
         String combinedInterests = Stream.concat(dto.getInterests().stream(), dto.getOtherInterests().stream())
                 .filter(s -> s != null && !s.isBlank())
                 .collect(Collectors.joining(", "));
+        String selectedProfilesContext = buildSelectedProfilesContext(dto);
 
         return """
                 ROLE:
@@ -265,6 +272,7 @@ public class ItineraryService {
                 - Accommodation Type: %s
                 - Travel Pace: %s
                 - Interests: %s
+                - Selected Traveler Profiles: %s
 
                 PLANNING RULES:
                 - Build a real-world feasible itinerary for the destination.
@@ -364,8 +372,43 @@ public class ItineraryService {
                         dto.getBudget(),
                         dto.getAccommodationType(),
                         dto.getTravelPace(),
-                        combinedInterests
+                        combinedInterests,
+                        selectedProfilesContext
                 );
+    }
+
+    private String buildSelectedProfilesContext(TripGenerationRequestDto dto) {
+        if (dto.getSelectedProfileIds() == null || dto.getSelectedProfileIds().isEmpty()) {
+            return "None selected.";
+        }
+
+        List<TravelerProfile> selectedProfiles = travelerProfileRepository.findByUserIdAndIds(
+                dto.getUserId(),
+                dto.getSelectedProfileIds()
+        );
+
+        if (selectedProfiles.isEmpty()) {
+            return "None selected.";
+        }
+
+        return selectedProfiles.stream()
+                .map(profile -> {
+                    String interests = profile.getInterests() == null || profile.getInterests().isEmpty()
+                            ? "none"
+                            : String.join(", ", profile.getInterests());
+
+                    return String.format(
+                            "%s [relation=%s, gender=%s, mobility=%s, dietary=%s, nationality=%s, interests=%s]",
+                            profile.getName(),
+                            Optional.ofNullable(profile.getRelation()).orElse("unspecified"),
+                            Optional.ofNullable(profile.getGender()).orElse("unspecified"),
+                            Optional.ofNullable(profile.getMobilityLevel()).orElse("none"),
+                            Optional.ofNullable(profile.getDietaryPreferences()).orElse("unspecified"),
+                            Optional.ofNullable(profile.getNationality()).orElse("unspecified"),
+                            interests
+                    );
+                })
+                .collect(Collectors.joining(" | "));
     }
 
     private String buildValidatorPrompt(String plannerJson) {

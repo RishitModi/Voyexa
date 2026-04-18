@@ -9,7 +9,7 @@ import {
   LogOut,
   Search,
   TrendingUp,
-  Settings,
+  Users,
   ChevronRight,
   Menu,
   ChevronLeft,
@@ -19,6 +19,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import UserProfileModal from "../components/UserProfileModal";
+import TravelerProfilesModal from "../components/TravelerProfilesModal";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -30,6 +31,8 @@ const Dashboard = () => {
   const [userName, setUserName] = useState("");
   const [userData, setUserData] = useState({ name: "", email: "", phone: "" });
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isTravelerProfilesModalOpen, setIsTravelerProfilesModalOpen] = useState(false);
+  const [userId, setUserId] = useState(null);
 
   // Refs for parallax animations
   const heroBgRef = useRef(null);
@@ -44,6 +47,10 @@ const Dashboard = () => {
 
   useEffect(() => {
     const storedName = localStorage.getItem("voyexa_user_name");
+    const storedUserId = localStorage.getItem("voyexa_user_id");
+    if (storedUserId && !Number.isNaN(Number(storedUserId))) {
+      setUserId(Number(storedUserId));
+    }
     if (storedName) {
       setUserName(storedName);
       setUserData({
@@ -302,8 +309,11 @@ const Dashboard = () => {
             >
               <Clock size={20} className="group-hover:text-indigo-400" /> My Trips
             </button>
-            <button className="w-full flex items-center gap-3 px-4 py-3.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-2xl font-semibold group transition-all">
-              <Settings size={20} className="group-hover:text-indigo-400" /> Settings
+            <button
+              onClick={() => setIsTravelerProfilesModalOpen(true)}
+              className="w-full flex items-center gap-3 px-4 py-3.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-2xl font-semibold group transition-all"
+            >
+              <Users size={20} className="group-hover:text-indigo-400" /> Traveler Profiles
             </button>
           </nav>
 
@@ -455,6 +465,11 @@ const Dashboard = () => {
           isOpen={isProfileModalOpen} 
           onClose={() => setIsProfileModalOpen(false)} 
           user={userData}
+        />
+        <TravelerProfilesModal
+          isOpen={isTravelerProfilesModalOpen}
+          onClose={() => setIsTravelerProfilesModalOpen(false)}
+          userId={userId}
         />
       </div>
   );

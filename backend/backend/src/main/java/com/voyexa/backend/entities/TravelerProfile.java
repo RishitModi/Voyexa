@@ -11,7 +11,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Map;
+import java.util.List;
 
 @Getter
 @Setter
@@ -58,7 +58,7 @@ public class TravelerProfile {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "interests")
-    private Map<String, Object> interests;
+    private List<String> interests;
 
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "created_at")

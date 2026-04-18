@@ -170,6 +170,9 @@ const CreateTrip = () => {
 
     const [step, setStep] = useState(1);
     const [apiError, setApiError] = useState("");
+    const [travelerProfiles, setTravelerProfiles] = useState([]);
+    const [selectedProfileIds, setSelectedProfileIds] = useState([]);
+    const [profilesLoading, setProfilesLoading] = useState(false);
 
     const [tripConfig, setTripConfig] = useState({
         origin: "",
@@ -199,6 +202,30 @@ const CreateTrip = () => {
             setStep(6);
         }
     }, [state]);
+
+    useEffect(() => {
+        const rawUserId = localStorage.getItem("voyexa_user_id");
+        const userId = rawUserId ? Number(rawUserId) : null;
+        if (!userId || Number.isNaN(userId)) return;
+
+        const fetchProfiles = async () => {
+            setProfilesLoading(true);
+            try {
+                const response = await fetch(`http://localhost:8080/api/traveler-profiles/user/${userId}`);
+                if (!response.ok) {
+                    throw new Error("Unable to load traveler profiles.");
+                }
+                const data = await response.json();
+                setTravelerProfiles(Array.isArray(data) ? data : []);
+            } catch (error) {
+                setTravelerProfiles([]);
+            } finally {
+                setProfilesLoading(false);
+            }
+        };
+
+        fetchProfiles();
+    }, []);
 
     // Calculate month constraints for trending destinations
     const today = new Date();
@@ -303,6 +330,7 @@ const CreateTrip = () => {
             travelPace: tripConfig.travelPace,
             interests: tripConfig.interests.filter(i => i !== "Others"),
             otherInterests: otherInterestsArray,
+            selectedProfileIds,
             promptMetadata: {
                 promptVersion: "2.0",
                 responseFormat: "json",
@@ -318,6 +346,14 @@ const CreateTrip = () => {
                 payload
             }
         });
+    };
+
+    const toggleProfileSelection = (profileId) => {
+        setSelectedProfileIds((prev) =>
+            prev.includes(profileId)
+                ? prev.filter((id) => id !== profileId)
+                : [...prev, profileId]
+        );
     };
 
     return (
@@ -548,6 +584,50 @@ const CreateTrip = () => {
                         <p className="text-slate-400 mb-10 font-medium">
                             Pick one or more things you want in this trip.
                         </p>
+
+                        <div className="mb-8 p-5 rounded-2xl border border-white/10 bg-white/5">
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">
+                                    Traveler Profiles
+                                </h3>
+                                <span className="text-xs text-indigo-300 font-semibold">
+                                    {selectedProfileIds.length} selected
+                                </span>
+                            </div>
+                            {profilesLoading ? (
+                                <p className="text-sm text-slate-500">Loading profiles...</p>
+                            ) : travelerProfiles.length === 0 ? (
+                                <p className="text-sm text-slate-500">
+                                    No saved profiles found. Add profiles from Dashboard sidebar (Traveler Profiles).
+                                </p>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {travelerProfiles.map((profile) => {
+                                        const isSelected = selectedProfileIds.includes(profile.id);
+                                        return (
+                                            <button
+                                                key={profile.id}
+                                                type="button"
+                                                onClick={() => toggleProfileSelection(profile.id)}
+                                                className={`p-3 rounded-xl border text-left transition-all ${
+                                                    isSelected
+                                                        ? "border-indigo-500 bg-indigo-500/15 text-indigo-300"
+                                                        : "border-white/10 bg-white/5 text-slate-400 hover:border-indigo-400/40"
+                                                }`}
+                                            >
+                                                <div className="font-bold">{profile.name}</div>
+                                                <div className="text-xs opacity-80 mt-1">
+                                                    {profile.relation || "relation"} • {profile.mobilityLevel || "mobility"}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            <p className="text-xs text-slate-500 mt-3">
+                                Selected profiles are included in itinerary generation so their preferences are considered.
+                            </p>
+                        </div>
 
                         <div className="grid grid-cols-2 gap-4 mb-8">
                             {interestOptions.map((interest) => {
