@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import useScrollReveal from '@/hooks/useScrollReveal';
+import { useTheme } from '@/context/ThemeContext';
 
 const LandingCTA = () => {
   const navigate = useNavigate();
+  const { theme } = useTheme();
+  const isDarkTheme = theme === 'dark';
   const sectionRef = useRef(null);
   const revealed = useScrollReveal(sectionRef);
 
@@ -36,7 +39,11 @@ const LandingCTA = () => {
                 data-testid="final-cta-btn"
                 onClick={() => navigate('/auth')}
                 size="lg"
-                className="bg-white text-indigo-600 hover:bg-white/90 px-8 py-6 text-lg font-semibold rounded-xl transition-all duration-200 shadow-xl hover:shadow-2xl group focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617] focus-visible:outline-none"
+                className={`px-8 py-6 text-lg font-semibold rounded-xl transition-all duration-200 shadow-xl hover:shadow-2xl group focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617] focus-visible:outline-none ${
+                  isDarkTheme
+                    ? 'bg-indigo-700 hover:bg-indigo-600 border border-indigo-400/30 text-indigo-100'
+                    : 'bg-white text-indigo-600 hover:bg-white/90'
+                }`}
               >
                 Get started now
                 <ArrowRight aria-hidden="true" className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />

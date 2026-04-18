@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useCallback, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import OnboardingAnimation from "../components/OnboardingAnimation";
 import {
   Plane,
@@ -26,6 +26,13 @@ const Auth = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.loginRequired) {
+      setError("Please log in to continue.");
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

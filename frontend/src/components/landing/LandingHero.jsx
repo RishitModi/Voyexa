@@ -2,9 +2,13 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plane, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useTheme } from '@/context/ThemeContext';
+import { navigateRequiringLogin } from '@/utils/auth';
 
 const LandingHero = () => {
   const navigate = useNavigate();
+  const { theme } = useTheme();
+  const isDarkTheme = theme === 'dark';
 
   return (
     <header className="relative overflow-hidden" aria-label="Voyexa introduction">
@@ -43,17 +47,25 @@ const LandingHero = () => {
               data-testid="hero-get-started-btn"
               onClick={() => navigate('/auth')}
               size="lg"
-              className="bg-indigo-500 hover:bg-indigo-600 text-white px-8 py-6 text-lg font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-indigo-500/25 w-full sm:w-auto focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617] focus-visible:outline-none"
+              className={`px-8 py-6 text-lg font-semibold rounded-xl transition-all duration-200 shadow-lg w-full sm:w-auto focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617] focus-visible:outline-none ${
+                isDarkTheme
+                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white hover:shadow-indigo-500/35'
+                  : 'bg-indigo-500 hover:bg-indigo-600 text-white hover:shadow-indigo-500/25'
+              }`}
             >
               <Sparkles aria-hidden="true" className="w-5 h-5 mr-2" />
               Get started
             </Button>
             <Button
               data-testid="hero-plan-trip-btn"
-              onClick={() => navigate('/create-trip')}
+              onClick={() => navigateRequiringLogin(navigate, '/create-trip')}
               size="lg"
               variant="outline"
-              className="border-2 border-white/20 hover:border-white/40 bg-white/5 backdrop-blur-sm text-white px-8 py-6 text-lg font-semibold rounded-xl transition-all duration-200 w-full sm:w-auto focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617] focus-visible:outline-none"
+              className={`border-2 px-8 py-6 text-lg font-semibold rounded-xl transition-all duration-200 w-full sm:w-auto focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617] focus-visible:outline-none ${
+                isDarkTheme
+                  ? 'border-slate-700 hover:border-indigo-400/60 bg-slate-900 hover:bg-slate-800 text-slate-100'
+                  : 'border-white/20 hover:border-white/40 bg-white/5 text-white'
+              }`}
             >
               Plan a trip
             </Button>

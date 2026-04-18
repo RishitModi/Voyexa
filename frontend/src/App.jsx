@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import CreateTrip from "./pages/CreateTrip";
@@ -11,6 +11,19 @@ import FloatingLines from "./components/FloatingLines";
 import ThemeToggle from "./components/ThemeToggle";
 import LandingPage from "./pages/LandingPage";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
+
+function isAuthenticated() {
+  const rawUserId = localStorage.getItem("voyexa_user_id");
+  return rawUserId !== null && !Number.isNaN(Number(rawUserId));
+}
+
+function ProtectedRoute({ children }) {
+  return isAuthenticated() ? children : <Navigate to="/auth" replace />;
+}
+
+function PublicOnlyRoute({ children }) {
+  return isAuthenticated() ? <Navigate to="/dashboard" replace /> : children;
+}
 
 function AppShell() {
   const location = useLocation();
@@ -51,12 +64,12 @@ function AppShell() {
       <div className="relative z-10">
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/create-trip" element={<CreateTrip />} />
-          <Route path="/flight-loading" element={<FlightLoadingPage />} />
-          <Route path="/itinerary-result" element={<ItineraryResult />} />
-          <Route path="/my-trips" element={<MyTrips />} />
+          <Route path="/auth" element={<PublicOnlyRoute><Auth /></PublicOnlyRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/create-trip" element={<ProtectedRoute><CreateTrip /></ProtectedRoute>} />
+          <Route path="/flight-loading" element={<ProtectedRoute><FlightLoadingPage /></ProtectedRoute>} />
+          <Route path="/itinerary-result" element={<ProtectedRoute><ItineraryResult /></ProtectedRoute>} />
+          <Route path="/my-trips" element={<ProtectedRoute><MyTrips /></ProtectedRoute>} />
           <Route path="/share/:shareToken" element={<SharedTrip />} />
         </Routes>
       </div>

@@ -1,14 +1,17 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import FloatingLines from '@/components/FloatingLines';
-import LandingNav from '@/components/landing/LandingNav';
 import LandingHero from '@/components/landing/LandingHero';
 import LandingTrustStrip from '@/components/landing/LandingTrustStrip';
 import LandingDestinations from '@/components/landing/LandingDestinations';
 import LandingHowItWorks from '@/components/landing/LandingHowItWorks';
 import LandingFeatures from '@/components/landing/LandingFeatures';
 import LandingCTA from '@/components/landing/LandingCTA';
+import { navigateRequiringLogin } from '@/utils/auth';
 
 const LandingPage = () => {
+  const navigate = useNavigate();
+
   useEffect(() => {
     const previousTitle = document.title;
     const title = 'Voyexa — AI-powered travel itineraries';
@@ -67,8 +70,6 @@ const LandingPage = () => {
     <div className="min-h-screen bg-[#020617] text-white relative">
       <FloatingLines />
 
-      <LandingNav />
-
       <main className="relative z-10">
         <section aria-label="Introduction" style={{ display: 'contents' }}>
           <LandingHero />
@@ -98,18 +99,20 @@ const LandingPage = () => {
               <p className="text-white/60 text-sm mt-1">Your itinerary, built in seconds.</p>
             </div>
             <nav className="flex gap-6 text-sm">
-              <a
-                href="/dashboard"
+              <button
+                type="button"
+                onClick={() => navigateRequiringLogin(navigate, '/dashboard')}
                 className="text-white/80 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617] focus-visible:outline-none"
               >
                 Dashboard
-              </a>
-              <a
-                href="/create-trip"
+              </button>
+              <button
+                type="button"
+                onClick={() => navigateRequiringLogin(navigate, '/create-trip')}
                 className="text-white/80 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617] focus-visible:outline-none"
               >
                 Create Trip
-              </a>
+              </button>
             </nav>
           </div>
         </div>
