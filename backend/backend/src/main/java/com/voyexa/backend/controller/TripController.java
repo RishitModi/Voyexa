@@ -1,11 +1,14 @@
 package com.voyexa.backend.controller;
 
+import com.voyexa.backend.DTOS.AlternativeGenerationRequestDto;
+import com.voyexa.backend.DTOS.AlternativeGenerationResponseDto;
 import com.voyexa.backend.DTOS.PlaceDto;
 import com.voyexa.backend.DTOS.TripGenerationRequestDto;
 import com.voyexa.backend.DTOS.TripGenerationResponseDto;
 import com.voyexa.backend.DTOS.TripRequestDto;
 import com.voyexa.backend.DTOS.TripResponseDto;
 import com.voyexa.backend.DTOS.TripSummaryDto;
+import com.voyexa.backend.services.ActivityAlternativeService;
 import com.voyexa.backend.services.ExternalPlaceService;
 import com.voyexa.backend.services.ItineraryService;
 import com.voyexa.backend.services.TripService;
@@ -27,14 +30,17 @@ public class TripController {
     private final ExternalPlaceService externalPlaceService;
     private final TripService tripService;
     private final ItineraryService itineraryService;
+    private final ActivityAlternativeService activityAlternativeService;
 
     public TripController(
             ExternalPlaceService externalPlaceService,
             TripService tripService,
-            ItineraryService itineraryService) {
+            ItineraryService itineraryService,
+            ActivityAlternativeService activityAlternativeService) {
         this.externalPlaceService = externalPlaceService;
         this.tripService = tripService;
         this.itineraryService = itineraryService;
+        this.activityAlternativeService = activityAlternativeService;
     }
 
     @GetMapping("/places/search")
@@ -95,5 +101,44 @@ public class TripController {
     public ResponseEntity<List<TripSummaryDto>> getTripsByUser(@PathVariable int userId) {
         List<TripSummaryDto> trips = tripService.getTripsByUserId(userId);
         return ResponseEntity.ok(trips);
+    }
+
+    /**
+     * Get activity alternatives for a specific time slot in the trip.
+     * Returns cached alternatives if available, otherwise generates new ones via Gemini.
+     */
+    @PostMapping("/{tripId}/alternatives")
+    public ResponseEntity<AlternativeGenerationResponseDto> getActivityAlternatives(
+            @PathVariable UUID tripId,
+            @Valid @RequestBody AlternativeGenerationRequestDto requestDto) {
+        try {
+            requestDto.setTripId(tripId);
+            AlternativeGenerationResponseDto response = activityAlternativeService.getAlternatives(requestDto);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Apply a selected alternative activity to the trip's itinerary.
+     * Updates both the alternative record and the trip's itinerary JSON.
+     */
+    @PutMapping("/{tripId}/apply-alternative")
+    public ResponseEntity<Void> applyAlternativeActivity(
+            @PathVariable UUID tripId,
+            @RequestParam Integer dayNumber,
+            @RequestParam String timeSlot,
+            @RequestParam Integer selectedIndex) {
+        try {
+            activityAlternativeService.applyAlternative(tripId, dayNumber, timeSlot, selectedIndex);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

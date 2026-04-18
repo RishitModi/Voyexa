@@ -168,6 +168,15 @@ public class ItineraryService {
         return null;
     }
 
+    /**
+     * Call Gemini API for generating activity alternatives.
+     * Uses the planner keys for consistency but marked as a lighter request.
+     */
+    public String callAiModelForAlternatives(String prompt) {
+        log.info("Calling Gemini API for activity alternatives generation...");
+        return callAiModel(prompt, plannerKeys);
+    }
+
     private void warnIfUnexpectedPoolSize(String poolName, Queue<String> keys, int expectedSize) {
         if (keys.size() != expectedSize) {
             log.warn("Gemini {} key pool size is {} (expected {}). Running in warning mode.", poolName, keys.size(), expectedSize);
