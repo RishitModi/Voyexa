@@ -15,5 +15,7 @@
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:2.0.17" level="project" />
     <orderEntry type="library" name="Maven: org.springframework:spring-beans:7.0.5" level="project" />
     <orderEntry type="library" name="Maven: org.springframework:spring-web:7.0.5" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework.security:spring-security-crypto:7.0.3" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework.security:spring-security-core:7.0.3" level="project" />
   </component>
 </module>

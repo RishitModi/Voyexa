@@ -169,7 +169,6 @@ const CreateTrip = () => {
     const { state } = useLocation();
 
     const [step, setStep] = useState(1);
-    const [isGenerating, setIsGenerating] = useState(false);
     const [apiError, setApiError] = useState("");
 
     const [tripConfig, setTripConfig] = useState({
@@ -273,15 +272,13 @@ const CreateTrip = () => {
             (tripConfig.otherInterests.length > 0 && tripConfig.otherInterests.every(i => i.trim() !== "")));
 
 
-    const handleBuildItinerary = async () => {
+    const handleBuildItinerary = () => {
         setApiError("");
-        setIsGenerating(true);
 
         const rawUserId = localStorage.getItem("voyexa_user_id");
         const userId = rawUserId ? Number(rawUserId) : null;
         if (!userId || Number.isNaN(userId)) {
             setApiError("Please log in again before building an itinerary.");
-            setIsGenerating(false);
             return;
         }
 
@@ -316,11 +313,427 @@ const CreateTrip = () => {
             }
         };
 
-        try {
-            const response = await fetch("http://localhost:8080/api/trips/generate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
+        navigate("/flight-loading", {
+            state: {
+                payload
+            }
+        });
+    };
+
+    return (
+        <div className="min-h-screen flex flex-col items-center py-16 px-6 relative overflow-hidden bg-transparent">
+            <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
+            <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+            <div className="w-full max-w-2xl flex justify-between items-center mb-12 relative z-10">
+                <button
+                    onClick={() => navigate("/dashboard")}
+                    className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors font-bold"
+                >
+                    <ArrowLeft size={20} /> Dashboard
+                </button>
+                <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div
+                            key={i}
+                            className={`h-1.5 w-10 rounded-full transition-all duration-500 ${step >= i ? "bg-indigo-500 w-14" : "bg-white/10"}`}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            <div className="w-full max-w-2xl bg-[#0a0f1d]/80 backdrop-blur-2xl rounded-[3rem] p-12 shadow-2xl border border-white/10 relative z-10 flex flex-col items-start">
+                {step === 1 && (
+                    <LocationAutocomplete
+                        icon={MapPinned}
+                        title="Starting Point"
+                        subtitle="Where are you beginning your journey from?"
+                        placeholder="Current City or Airport"
+                        value={tripConfig.origin}
+                        onChange={(val) => setTripConfig({ ...tripConfig, origin: val })}
+                        onNext={() => setStep(2)}
+                        nextLabel="Set Destination"
+                        showBackButton={false}
+                        themeColor="default"
+                    />
+                )}
+
+                {step === 2 && (
+                    <LocationAutocomplete
+                        icon={MapPin}
+                        title="Target Location"
+                        subtitle="Where should the AI build your itinerary?"
+                        placeholder="e.g. Paris, Zurich, Tokyo"
+                        value={tripConfig.destination}
+                        onChange={(val) =>
+                            setTripConfig({ ...tripConfig, destination: val })
+                        }
+                        onNext={() => setStep(3)}
+                        onBack={() => setStep(1)}
+                        themeColor="indigo"
+                    />
+                )}
+
+                {step === 3 && (
+                    <div className="animate-in fade-in slide-in-from-right-4 duration-500 w-full">
+                        <div className="bg-white/10 w-16 h-16 rounded-[1.5rem] flex items-center justify-center text-indigo-400 mb-8">
+                            <Calendar size={32} />
+                        </div>
+                        <h1 className="text-4xl font-black text-white mb-10">Trip Logistics</h1>
+
+                        <div className="grid grid-cols-2 gap-6 mb-8">
+                            <div className="space-y-3">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest px-1">
+                                    Departure
+                                </label>
+                                <input
+                                    type="date"
+                                    min={minDate}
+                                    max={maxDateConstrained}
+                                    className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-lg font-bold text-white outline-none focus:border-indigo-500 transition-all color-scheme-dark"
+                                    value={tripConfig.startDate}
+                                    onChange={(e) =>
+                                        setTripConfig({ ...tripConfig, startDate: e.target.value })
+                                    }
+                                />
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest px-1">
+                                    Return
+                                </label>
+                                <input
+                                    type="date"
+                                    min={tripConfig.startDate || minDate}
+                                    max={maxDateConstrained}
+                                    className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-lg font-bold text-white outline-none focus:border-indigo-500 transition-all color-scheme-dark"
+                                    value={tripConfig.endDate}
+                                    onChange={(e) =>
+                                        setTripConfig({ ...tripConfig, endDate: e.target.value })
+                                    }
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 mb-8">
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest px-1">
+                                Date flexibility
+                            </label>
+                            <div className="grid grid-cols-2 gap-4">
+                                {dateFlexibilityOptions.map((option) => (
+                                    <button
+                                        key={option}
+                                        onClick={() =>
+                                            setTripConfig({ ...tripConfig, flexibility: option })
+                                        }
+                                        className={`p-4 rounded-2xl border-2 font-bold text-left transition-all ${tripConfig.flexibility === option
+                                                ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                                                : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
+                                            }`}
+                                    >
+                                        {option}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 mb-6">
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest px-1">
+                                Who is traveling?
+                            </label>
+                            <div className="grid grid-cols-2 gap-4">
+                                {travelerOptions.map((opt) => (
+                                    <button
+                                        key={opt.id}
+                                        onClick={() =>
+                                            setTripConfig((prev) => ({ ...prev, travelers: opt.id }))
+                                        }
+                                        className={`p-5 rounded-2xl border-2 font-bold text-left transition-all flex items-center gap-4 ${tripConfig.travelers === opt.id
+                                                ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                                                : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
+                                            }`}
+                                    >
+                                        {opt.icon} {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {(tripConfig.travelers === "Family" ||
+                            tripConfig.travelers === "Friends") && (
+                                <div className="animate-in fade-in zoom-in duration-300 p-6 bg-white/5 border border-white/10 rounded-2xl mb-6 space-y-5">
+                                    <div className="text-white font-bold">Traveler Count</div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h4 className="text-white font-semibold">Adults</h4>
+                                            <p className="text-xs text-slate-500">Age 13+</p>
+                                        </div>
+                                        <div className="flex items-center gap-6">
+                                            <button
+                                                onClick={() => updateCounter("adultCount", -1, 1, 20)}
+                                                className="p-2 bg-white/10 text-white rounded-lg hover:bg-indigo-600 transition-all"
+                                            >
+                                                <Minus size={18} />
+                                            </button>
+                                            <span className="text-2xl font-black text-white w-8 text-center">
+                                                {tripConfig.adultCount}
+                                            </span>
+                                            <button
+                                                onClick={() => updateCounter("adultCount", 1, 1, 20)}
+                                                className="p-2 bg-white/10 text-white rounded-lg hover:bg-indigo-600 transition-all"
+                                            >
+                                                <Plus size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h4 className="text-white font-semibold">Children</h4>
+                                            <p className="text-xs text-slate-500">Age 0-12</p>
+                                        </div>
+                                        <div className="flex items-center gap-6">
+                                            <button
+                                                onClick={() => updateCounter("childCount", -1, 0, 20)}
+                                                className="p-2 bg-white/10 text-white rounded-lg hover:bg-indigo-600 transition-all"
+                                            >
+                                                <Minus size={18} />
+                                            </button>
+                                            <span className="text-2xl font-black text-white w-8 text-center">
+                                                {tripConfig.childCount}
+                                            </span>
+                                            <button
+                                                onClick={() => updateCounter("childCount", 1, 0, 20)}
+                                                className="p-2 bg-white/10 text-white rounded-lg hover:bg-indigo-600 transition-all"
+                                            >
+                                                <Plus size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                        <div className="mb-10 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
+                            <p className="text-sm text-indigo-300 font-semibold">
+                                Total Travelers: {tripConfig.travelerCount}
+                            </p>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setStep(2)}
+                                className="flex-1 py-5 rounded-2xl font-bold text-slate-400 hover:text-white transition-all"
+                            >
+                                Back
+                            </button>
+                            <button
+                                disabled={!tripConfig.startDate || !tripConfig.endDate}
+                                onClick={() => setStep(4)}
+                                className="flex-[2] bg-white text-slate-950 py-5 rounded-2xl font-black disabled:opacity-30 transition-all"
+                            >
+                                Continue
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {step === 4 && (
+                    <div className="animate-in fade-in slide-in-from-right-4 duration-500 w-full">
+                        <div className="bg-white/10 w-16 h-16 rounded-[1.5rem] flex items-center justify-center text-indigo-400 mb-8">
+                            <Sparkles size={32} />
+                        </div>
+                        <h1 className="text-4xl font-black text-white mb-2">
+                            Interests / Preferences
+                        </h1>
+                        <p className="text-slate-400 mb-10 font-medium">
+                            Pick one or more things you want in this trip.
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-4 mb-8">
+                            {interestOptions.map((interest) => {
+                                const isSelected = tripConfig.interests.includes(interest);
+                                return (
+                                    <button
+                                        key={interest}
+                                        onClick={() => toggleInterest(interest)}
+                                        className={`p-4 rounded-2xl border-2 font-bold text-left transition-all flex items-center justify-between ${isSelected
+                                                ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                                                : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
+                                            }`}
+                                    >
+                                        <span>{interest}</span>
+                                        <span
+                                            className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs ${isSelected
+                                                    ? "border-indigo-400 bg-indigo-500/30 text-indigo-300"
+                                                    : "border-slate-500/50 text-transparent"
+                                                }`}
+                                        >
+                                            ✓
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {tripConfig.interests.includes("Others") && (
+                            <div className="mb-10">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest px-1 block mb-3">
+                                    Other interests (comma-separated)
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. photography, wellness, live music"
+                                    value={tripConfig.otherInterests.join(', ')}
+                                    onChange={(e) =>
+                                        setTripConfig({ ...tripConfig, otherInterests: e.target.value.split(',').map(s => s.trim()) })
+                                    }
+                                    className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-base text-white outline-none focus:border-indigo-500 placeholder:text-slate-600 transition-all"
+                                />
+                            </div>
+                        )}
+
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setStep(3)}
+                                className="flex-1 py-5 rounded-2xl font-bold text-slate-400 hover:text-white transition-all"
+                            >
+                                Back
+                            </button>
+                            <button
+                                disabled={!canContinueFromInterests}
+                                onClick={() => setStep(5)}
+                                className="flex-[2] bg-white text-slate-950 py-5 rounded-2xl font-black disabled:opacity-30 transition-all"
+                            >
+                                Continue
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {step === 5 && (
+                    <div className="animate-in fade-in slide-in-from-right-4 duration-500 w-full">
+                        <div className="bg-white/10 w-16 h-16 rounded-[1.5rem] flex items-center justify-center text-indigo-400 mb-8">
+                            <Sparkles size={32} />
+                        </div>
+                        <h1 className="text-4xl font-black text-white mb-2">Travel Preferences</h1>
+                        <p className="text-slate-400 mb-10 font-medium">
+                            Choose your stay style and pace.
+                        </p>
+
+                        <div className="space-y-4 mb-8">
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest px-1">
+                                Accommodation preference
+                            </label>
+                            <div className="grid grid-cols-2 gap-4">
+                                {accommodationOptions.map((option) => (
+                                    <button
+                                        key={option}
+                                        onClick={() =>
+                                            setTripConfig({
+                                                ...tripConfig,
+                                                accommodationType: option
+                                            })
+                                        }
+                                        className={`p-4 rounded-2xl border-2 font-bold text-left transition-all ${tripConfig.accommodationType === option
+                                                ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                                                : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
+                                            }`}
+                                    >
+                                        {option}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 mb-10">
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest px-1">
+                                Pace of trip
+                            </label>
+                            <div className="grid grid-cols-3 gap-4">
+                                {tripPaceOptions.map((option) => (
+                                    <button
+                                        key={option}
+                                        onClick={() => setTripConfig({ ...tripConfig, travelPace: option })}
+                                        className={`p-4 rounded-2xl border-2 font-bold text-center transition-all ${tripConfig.travelPace === option
+                                                ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                                                : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
+                                            }`}
+                                    >
+                                        {option}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setStep(4)}
+                                className="flex-1 py-5 rounded-2xl font-bold text-slate-400 hover:text-white transition-all"
+                            >
+                                Back
+                            </button>
+                            <button
+                                onClick={() => setStep(6)}
+                                className="flex-[2] bg-white text-slate-950 py-5 rounded-2xl font-black transition-all"
+                            >
+                                Continue
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {step === 6 && (
+                    <div className="animate-in fade-in slide-in-from-right-4 duration-500 w-full">
+                        <div className="bg-amber-500/20 w-16 h-16 rounded-[1.5rem] flex items-center justify-center text-amber-500 mb-8 border border-amber-500/20">
+                            <Wallet size={32} />
+                        </div>
+                        <h1 className="text-4xl font-black text-white mb-10">Budget Profile</h1>
+                        <div className="grid grid-cols-1 gap-4 mb-12">
+                            {["Cheap", "Moderate", "Luxury"].map((b) => (
+                                <button
+                                    key={b}
+                                    onClick={() => setTripConfig({ ...tripConfig, budget: b })}
+                                    className={`p-6 rounded-2xl border-2 font-black text-left transition-all flex justify-between items-center ${tripConfig.budget === b
+                                            ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                                            : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
+                                        }`}
+                                >
+                                    {b} {tripConfig.budget === b && <Sparkles size={18} />}
+                                </button>
+                            ))}
+                        </div>
+
+                        {apiError && (
+                            <div className="w-full mb-4 text-red-200 bg-red-900/30 p-3 rounded-xl text-sm font-bold border border-red-500/20">
+                                {apiError}
+                            </div>
+                        )}
+
+                        <div className="flex gap-4 mt-4">
+                            <button
+                                onClick={() => setStep(5)}
+                                className="flex-1 py-5 rounded-2xl font-bold text-slate-400 hover:text-white transition-all"
+                            >
+                                Back
+                            </button>
+                            <button
+                                onClick={handleBuildItinerary}
+                                className="flex-[2] bg-indigo-600 text-white py-6 rounded-2xl font-black text-xl flex items-center justify-center gap-3 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-500/40"
+                            >
+                                <Sparkles size={24} /> BUILD ITINERARY
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <style
+                dangerouslySetInnerHTML={{ __html: ".color-scheme-dark { color-scheme: dark; }" }}
+            />
+        </div>
+    );
+};
+/*
             });
 
             if (!response.ok) {
@@ -334,13 +747,10 @@ const CreateTrip = () => {
                 return;
             }
 
-            // The backend now returns { tripId, itineraryJson } as a JSON object.
             const data = await response.json();
-            navigate("/itinerary-result", {
-                state: {
-                    tripId: data.tripId,
-                    itineraryJson: data.itineraryJson
-                }
+            setPendingNavigationData({
+                tripId: data.tripId,
+                itineraryJson: data.itineraryJson
             });
 
         } catch (e) {
@@ -350,8 +760,23 @@ const CreateTrip = () => {
         }
     };
 
+    const handleLoaderComplete = useCallback(() => {
+        if (!pendingNavigationData) return;
+
+        navigate("/itinerary-result", {
+            state: pendingNavigationData
+        });
+        setPendingNavigationData(null);
+    }, [navigate, pendingNavigationData]);
+
     return (
         <div className="min-h-screen flex flex-col items-center py-16 px-6 relative overflow-hidden bg-transparent">
+            <FlightLoader
+                source={tripConfig.origin || "Mumbai"}
+                destination={tripConfig.destination || "Paris"}
+                loading={isGenerating}
+                onComplete={handleLoaderComplete}
+            />
             <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
             <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none"></div>
 
@@ -774,4 +1199,5 @@ const CreateTrip = () => {
     );
 };
 
+*/
 export default CreateTrip;
