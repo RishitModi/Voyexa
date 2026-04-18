@@ -45,6 +45,11 @@ const ItineraryResult = () => {
     const [forkName, setForkName] = useState('');
     const [isForkingSaving, setIsForkingSaving] = useState(false);
 
+    // Share state
+    const [shareLink, setShareLink] = useState(null);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [isSharingLoading, setIsSharingLoading] = useState(false);
+
     const sensors = useSensors(
         useSensor(PointerSensor, { distance: 8 }),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -174,6 +179,87 @@ const ItineraryResult = () => {
                             </p>
                         </div>
                     )}
+                </div>
+            </div>
+        );
+    };
+
+    /**
+     * Share Modal Component
+     */
+    const ShareModal = () => {
+        if (!showShareModal) return null;
+
+        return (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-slate-900 border border-white/20 rounded-2xl w-full max-w-md shadow-2xl">
+                    <div className="border-b border-white/10 p-6 flex items-center justify-between">
+                        <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                            <Share2 size={24} className="text-blue-400" />
+                            Share Trip
+                        </h2>
+                        <button
+                            onClick={() => setShowShareModal(false)}
+                            className="p-2 hover:bg-white/10 rounded-lg transition text-slate-400 hover:text-white"
+                        >
+                            <X size={24} />
+                        </button>
+                    </div>
+
+                    <div className="p-6 space-y-4">
+                        {!shareLink ? (
+                            <>
+                                <p className="text-sm text-slate-400">
+                                    Create a shareable link for this trip. Anyone with the link can view it.
+                                </p>
+                                <button
+                                    onClick={handleCreateShareLink}
+                                    disabled={isSharingLoading}
+                                    className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition flex items-center justify-center gap-2"
+                                >
+                                    {isSharingLoading ? (
+                                        <>
+                                            <div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                            Creating link...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Share2 size={16} />
+                                            Create Share Link
+                                        </>
+                                    )}
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-sm text-slate-400 mb-2">Share Link Created!</p>
+                                <div className="bg-slate-800 border border-white/10 rounded-lg p-3 break-all text-xs text-slate-300">
+                                    {shareLink}
+                                </div>
+                                <button
+                                    onClick={handleCopyShareLink}
+                                    className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition"
+                                >
+                                    📋 Copy Link
+                                </button>
+                                <button
+                                    onClick={() => window.open(shareLink, '_blank')}
+                                    className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition"
+                                >
+                                    🔗 Open Link
+                                </button>
+                            </>
+                        )}
+                    </div>
+
+                    <div className="border-t border-white/5 p-6">
+                        <button
+                            onClick={() => setShowShareModal(false)}
+                            className="w-full px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg transition"
+                        >
+                            Close
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -557,6 +643,40 @@ const ItineraryResult = () => {
         }
     };
 
+    /**
+     * Handle creating a share link
+     */
+    const handleCreateShareLink = async () => {
+        setIsSharingLoading(true);
+        try {
+            // Get userId from localStorage or pass it
+            const userId = localStorage.getItem('userId') || 1;
+            const response = await fetch(`http://localhost:8080/api/trips/${tripId}/share?userId=${userId}`, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to create share link');
+            }
+
+            const data = await response.json();
+            setShareLink(data.shareUrl);
+        } catch (error) {
+            console.error('Error creating share link:', error);
+            alert('Failed to create share link. Please try again.');
+        } finally {
+            setIsSharingLoading(false);
+        }
+    };
+
+    /**
+     * Copy share link to clipboard
+     */
+    const handleCopyShareLink = () => {
+        navigator.clipboard.writeText(shareLink);
+        alert('✅ Share link copied to clipboard!');
+    };
+
     const ActivityCard = ({ section, data, icon: Icon, colorClass, dayNumber, timeSlot }) => {
         if (!data || !data.activity) return null;
 
@@ -650,7 +770,11 @@ const ItineraryResult = () => {
                         <span className="font-bold tracking-tight">Voyexa Planner</span>
                     </button>
                     <div className="flex gap-3">
-                        <button className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition text-slate-300">
+                        <button
+                            onClick={() => setShowShareModal(true)}
+                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition text-slate-300"
+                            title="Share this trip"
+                        >
                             <Share2 size={18} />
                         </button>
                         <button
@@ -730,6 +854,9 @@ const ItineraryResult = () => {
 
                 {/* Alternatives Modal */}
                 <AlternativesModal />
+
+                {/* Share Modal */}
+                <ShareModal />
 
                 {/* Fork Modal */}
                 <ForkModal />
