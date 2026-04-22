@@ -370,9 +370,6 @@ const Dashboard = () => {
               <p className="text-slate-300 text-base md:text-lg leading-relaxed font-medium mb-8 max-w-xl">
                 AI-driven itineraries for travelers who value time as much as the destination.
               </p>
-              <button className="flex items-center gap-2 text-white font-bold hover:text-indigo-400 transition-colors">
-                View Analytics <ChevronRight size={18} />
-              </button>
             </div>
 
             {/* Header inside hero */}
