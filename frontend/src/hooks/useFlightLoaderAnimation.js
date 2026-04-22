@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { resolveCityCoordinates } from "../utils/geocoding";
-
-const DEFAULT_SOURCE = { lat: 19.076, lon: 72.8777 };
-const DEFAULT_DESTINATION = { lat: 48.8566, lon: 2.3522 };
+import { resolveCityCoordinates, resolveCityCoordinatesSync } from "../utils/geocoding";
 
 const LOADER_MESSAGES = [
   "Generating your perfect trip...",
@@ -76,7 +73,7 @@ const LOADER_MESSAGES = [
   "Your itinerary is nearly ready...",
 ];
 
-const toLatLng = ({ lat, lon }) => [lat, lon];
+const toLatLng = (coords) => (coords ? [coords.lat, coords.lon] : null);
 
 const linearPoint = (source, destination, t) => {
   return {
@@ -97,8 +94,8 @@ export const useFlightLoaderAnimation = ({
   loading,
   onFadeComplete,
 }) => {
-  const [sourceGeo, setSourceGeo] = useState(DEFAULT_SOURCE);
-  const [destinationGeo, setDestinationGeo] = useState(DEFAULT_DESTINATION);
+  const [sourceGeo, setSourceGeo] = useState(() => resolveCityCoordinatesSync(source));
+  const [destinationGeo, setDestinationGeo] = useState(() => resolveCityCoordinatesSync(destination));
   const [visible, setVisible] = useState(Boolean(loading));
   const [progress, setProgress] = useState(0);
   const [loopCount, setLoopCount] = useState(0);
@@ -122,10 +119,17 @@ export const useFlightLoaderAnimation = ({
     let cancelled = false;
 
     const fetchCoordinates = async () => {
+      const immediateSource = resolveCityCoordinatesSync(source);
+      const immediateDestination = resolveCityCoordinatesSync(destination);
+      if (!cancelled) {
+        if (immediateSource) setSourceGeo(immediateSource);
+        if (immediateDestination) setDestinationGeo(immediateDestination);
+      }
+
       try {
         const [resolvedSource, resolvedDestination] = await Promise.all([
-          resolveCityCoordinates(source || "Mumbai"),
-          resolveCityCoordinates(destination || "Paris"),
+          resolveCityCoordinates(source),
+          resolveCityCoordinates(destination),
         ]);
 
         if (!cancelled) {
@@ -134,10 +138,6 @@ export const useFlightLoaderAnimation = ({
         }
       } catch (error) {
         console.error("Flight loader geocoding failed:", error);
-        if (!cancelled) {
-          setSourceGeo(DEFAULT_SOURCE);
-          setDestinationGeo(DEFAULT_DESTINATION);
-        }
       }
     };
 
@@ -254,12 +254,13 @@ export const useFlightLoaderAnimation = ({
     };
   }, []);
 
-  const straightHeading = useMemo(
-    () => linearHeading(sourceGeo, destinationGeo),
-    [sourceGeo, destinationGeo]
-  );
+  const straightHeading = useMemo(() => {
+    if (!sourceGeo || !destinationGeo) return 0;
+    return linearHeading(sourceGeo, destinationGeo);
+  }, [sourceGeo, destinationGeo]);
 
   const curvePoints = useMemo(() => {
+    if (!sourceGeo || !destinationGeo) return [];
     const steps = 72;
     return Array.from({ length: steps + 1 }, (_, index) => {
       const t = index / steps;
@@ -269,6 +270,7 @@ export const useFlightLoaderAnimation = ({
   }, [sourceGeo, destinationGeo]);
 
   const planePosition = useMemo(() => {
+    if (!sourceGeo || !destinationGeo) return null;
     const point = linearPoint(sourceGeo, destinationGeo, progress);
     return {
       lat: point.lat,
@@ -278,6 +280,7 @@ export const useFlightLoaderAnimation = ({
   }, [sourceGeo, destinationGeo, progress, straightHeading]);
 
   const trailPoints = useMemo(() => {
+    if (!sourceGeo || !destinationGeo) return [];
     const trailLength = 0.22;
     const from = Math.max(0, progress - trailLength);
     const steps = 20;

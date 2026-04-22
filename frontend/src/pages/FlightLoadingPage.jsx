@@ -11,8 +11,8 @@ const FlightLoadingPage = () => {
   const [apiError, setApiError] = useState("");
   const [result, setResult] = useState(null);
 
-  const source = useMemo(() => payload?.origin || "Mumbai", [payload]);
-  const destination = useMemo(() => payload?.destination || "Paris", [payload]);
+  const source = useMemo(() => payload?.origin?.trim() || "", [payload]);
+  const destination = useMemo(() => payload?.destination?.trim() || "", [payload]);
 
   useEffect(() => {
     if (!payload) {

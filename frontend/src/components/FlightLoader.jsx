@@ -29,8 +29,8 @@ const FlightLoader = ({ source, destination, loading, onComplete }) => {
   const { mapContainerRef } = useLeafletFlightMap({
     visible,
     loading,
-    source: source || "Mumbai",
-    destination: destination || "Paris",
+    source: source || "Source",
+    destination: destination || "Destination",
     sourceLatLng,
     destinationLatLng,
     curvePoints,
@@ -61,7 +61,7 @@ const FlightLoader = ({ source, destination, loading, onComplete }) => {
           ? "bg-blue-50/95 border-blue-300 text-blue-900 shadow-[0_8px_24px_rgba(30,64,175,0.15)]"
           : "bg-slate-900/80 border-slate-600/80 text-slate-100 shadow-[0_8px_30px_rgba(2,6,23,0.45)]"
       }`}>
-        {sourceCoords?.displayName?.split(",")[0] || source} → {destinationCoords?.displayName?.split(",")[0] || destination}
+        {(sourceCoords?.displayName?.split(",")[0] || source || "Source")} → {(destinationCoords?.displayName?.split(",")[0] || destination || "Destination")}
       </div>
 
       <div className="absolute z-50 bottom-8 left-1/2 -translate-x-1/2 pointer-events-none px-4 w-full max-w-3xl">

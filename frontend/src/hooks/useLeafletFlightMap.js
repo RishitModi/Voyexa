@@ -96,44 +96,6 @@ export const useLeafletFlightMap = ({
       lineJoin: "round",
     }).addTo(map);
 
-    sourceMarkerRef.current = L.circleMarker(sourceLatLng, {
-      radius: 6,
-      color: "#cbd5e1",
-      weight: 1.8,
-      fillColor: "#e2e8f0",
-      fillOpacity: 0.9,
-    })
-      .addTo(map)
-      .bindTooltip(source, {
-        permanent: true,
-        direction: "top",
-        className: "flight-city-label",
-        offset: [0, -8],
-      });
-
-    destinationMarkerRef.current = L.circleMarker(destinationLatLng, {
-      radius: 6.4,
-      color: "#86efac",
-      weight: 1.8,
-      fillColor: "#4ade80",
-      fillOpacity: 0.92,
-      className: "flight-destination-marker",
-    })
-      .addTo(map)
-      .bindTooltip(destination, {
-        permanent: true,
-        direction: "top",
-        className: "flight-city-label flight-city-label-destination",
-        offset: [0, -8],
-      });
-
-    planeMarkerRef.current = L.marker(sourceLatLng, {
-      icon: createPlaneIcon(),
-      keyboard: false,
-      interactive: false,
-      zIndexOffset: 900,
-    }).addTo(map);
-
     return () => {
       map.remove();
       mapRef.current = null;
@@ -159,10 +121,55 @@ export const useLeafletFlightMap = ({
     const map = mapRef.current;
     if (!map || !sourceLatLng || !destinationLatLng) return;
 
-    sourceMarkerRef.current?.setLatLng(sourceLatLng);
-    sourceMarkerRef.current?.setTooltipContent(source);
-    destinationMarkerRef.current?.setLatLng(destinationLatLng);
-    destinationMarkerRef.current?.setTooltipContent(destination);
+    if (!sourceMarkerRef.current) {
+      sourceMarkerRef.current = L.circleMarker(sourceLatLng, {
+        radius: 6,
+        color: "#cbd5e1",
+        weight: 1.8,
+        fillColor: "#e2e8f0",
+        fillOpacity: 0.9,
+      })
+        .addTo(map)
+        .bindTooltip(source, {
+          permanent: true,
+          direction: "top",
+          className: "flight-city-label",
+          offset: [0, -8],
+        });
+    } else {
+      sourceMarkerRef.current.setLatLng(sourceLatLng);
+      sourceMarkerRef.current.setTooltipContent(source);
+    }
+
+    if (!destinationMarkerRef.current) {
+      destinationMarkerRef.current = L.circleMarker(destinationLatLng, {
+        radius: 6.4,
+        color: "#86efac",
+        weight: 1.8,
+        fillColor: "#4ade80",
+        fillOpacity: 0.92,
+        className: "flight-destination-marker",
+      })
+        .addTo(map)
+        .bindTooltip(destination, {
+          permanent: true,
+          direction: "top",
+          className: "flight-city-label flight-city-label-destination",
+          offset: [0, -8],
+        });
+    } else {
+      destinationMarkerRef.current.setLatLng(destinationLatLng);
+      destinationMarkerRef.current.setTooltipContent(destination);
+    }
+
+    if (!planeMarkerRef.current) {
+      planeMarkerRef.current = L.marker(sourceLatLng, {
+        icon: createPlaneIcon(),
+        keyboard: false,
+        interactive: false,
+        zIndexOffset: 900,
+      }).addTo(map);
+    }
 
     const shouldRefit = !hasFittedBoundsRef.current || loading;
     if (!shouldRefit) return;
@@ -226,7 +233,7 @@ export const useLeafletFlightMap = ({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || loading || !showArrivalMarker || arrivalZoomedRef.current) return;
+    if (!map || !destinationLatLng || loading || !showArrivalMarker || arrivalZoomedRef.current) return;
 
     arrivalZoomedRef.current = true;
     map.flyTo(destinationLatLng, Math.min(6, map.getZoom() + 1.3), {

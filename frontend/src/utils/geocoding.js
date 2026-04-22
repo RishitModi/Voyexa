@@ -173,3 +173,25 @@ export const resolveCityCoordinates = async (city) => {
   return request;
 };
 
+export const resolveCityCoordinatesSync = (city) => {
+  const normalized = normalizeCityName(city);
+  if (!normalized) return null;
+
+  const cachedMemory = inMemoryCache.get(normalized);
+  if (cachedMemory) return cachedMemory;
+
+  const cachedStorage = readStorageCache(city);
+  if (cachedStorage) {
+    inMemoryCache.set(normalized, cachedStorage);
+    return cachedStorage;
+  }
+
+  const fallback = getFallbackCoordinates(city);
+  if (fallback) {
+    inMemoryCache.set(normalized, fallback);
+    return fallback;
+  }
+
+  return null;
+};
+
