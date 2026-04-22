@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -51,7 +52,7 @@ public class ItineraryService {
             TravelerProfileRepository travelerProfileRepository
     ) {
         this.restTemplate = new RestTemplate();
-        
+
         if (plannerApiKeyStr != null) {
             Arrays.stream(plannerApiKeyStr.split(","))
                     .map(String::trim)
@@ -165,11 +166,11 @@ public class ItineraryService {
             } catch (RestClientException e) {
                 log.warn("Error calling Gemini API: {}, trying next key...", e.getMessage());
             }
-            
+
             // Push to back of queue to preserve the key for future calls even if it failed (e.g. rate limit)
             apiKeys.offer(apiKey);
         }
-        
+
         log.error("All Gemini API keys exhausted or failed for this request.");
         return null;
     }
@@ -193,7 +194,7 @@ public class ItineraryService {
         // The API sometimes wraps the JSON in markdown code fences. Remove them.
         return rawText.replace("```json", "").replace("```", "").trim();
     }
-    
+
     public String injectImagesIntoItinerary(String json) {
         try {
             JsonNode root = objectMapper.readTree(json);
@@ -211,13 +212,33 @@ public class ItineraryService {
                         if (activityNode.isObject()) {
                             String title = activityNode.path("title").asText("");
                             String location = activityNode.path("location").asText("");
-                            
+
                             if (!title.isEmpty()) {
                                 java.util.concurrent.CompletableFuture<Void> future = java.util.concurrent.CompletableFuture.runAsync(() -> {
                                     String imageUrl = pexelsImageService.fetchImageForActivity(title, location);
                                     ((ObjectNode) activityNode).put("imageUrl", imageUrl);
                                 });
                                 futures.add(future);
+                            }
+                        }
+
+                        // Inject images for alternatives if available
+                        JsonNode alternativesNode = timeNode.path("alternatives");
+                        if (alternativesNode.isArray()) {
+                            for (JsonNode altNode : alternativesNode) {
+                                JsonNode altActivityNode = altNode.path("activity");
+                                if (altActivityNode.isObject()) {
+                                    String altTitle = altActivityNode.path("title").asText("");
+                                    String altLocation = altActivityNode.path("location").asText("");
+
+                                    if (!altTitle.isEmpty()) {
+                                        java.util.concurrent.CompletableFuture<Void> altFuture = java.util.concurrent.CompletableFuture.runAsync(() -> {
+                                            String imageUrl = pexelsImageService.fetchImageForActivity(altTitle, altLocation);
+                                            ((ObjectNode) altActivityNode).put("imageUrl", imageUrl);
+                                        });
+                                        futures.add(altFuture);
+                                    }
+                                }
                             }
                         }
                     }
@@ -231,7 +252,7 @@ public class ItineraryService {
 
         } catch (Exception e) {
             log.error("Failed to inject images into itinerary JSON", e);
-            return json; 
+            return json;
         }
     }
 
@@ -241,6 +262,7 @@ public class ItineraryService {
                 .filter(s -> s != null && !s.isBlank())
                 .collect(Collectors.joining(", "));
         String selectedProfilesContext = buildSelectedProfilesContext(dto);
+        String travelerVibeGuidance = buildTravelerVibeGuidance(dto.getTravelers());
 
         return """
                 ROLE:
@@ -297,6 +319,16 @@ public class ItineraryService {
                   - Relaxed → 1 to 2 main activities with downtime
                   - Balanced → standard tourist day
                   - Packed → full day with efficient sequencing
+                - Traveler-type style guidance: %s
+
+                ALTERNATIVES GENERATION:
+                - For each time slot (morning, afternoon, evening), generate 2 alternative activities.
+                - Each alternative must be completely different from the main activity and from each other.
+                - Alternatives should appeal to different preferences while matching the trip's budget and destination.
+                - Provide varied activity types across alternatives (e.g., cultural, adventure, relaxation, food-focused, shopping, local experience).
+                - Each alternative must fit the time slot duration and cost tier of the main activity.
+                - Do not repeat any activity (main or alternative) across the entire itinerary.
+                - Alternatives should be realistic and available in the destination.
 
                 CONTENT GUIDELINES:
                 - Trip summary should feel personalized and concise.
@@ -304,6 +336,7 @@ public class ItineraryService {
                 - Activity descriptions should be practical and specific.
                 - Include estimated time and cost tier where required.
                 - Use simple, clean, frontend-friendly text.
+                - For each activity time slot, generate 2 alternative activities that offer different experiences.
 
                 OUTPUT JSON SCHEMA:
                 {
@@ -325,7 +358,20 @@ public class ItineraryService {
                             "bookingLink": null
                           }
                         },
-                        "whyItFits": "string"
+                        "whyItFits": "string",
+                        "alternatives": [
+                          {
+                            "activity": {
+                              "title": "string",
+                              "description": "string",
+                              "location": "string",
+                              "bookingInfo": {
+                                "searchQuery": "string or null",
+                                "bookingLink": null
+                              }
+                            }
+                          }
+                        ]
                       },
                       "afternoon": {
                         "activity": {
@@ -338,7 +384,20 @@ public class ItineraryService {
                           }
                         },
                         "estimatedTime": "string",
-                        "costTier": "Free | $ | $$ | $$$"
+                        "costTier": "Free | $ | $$ | $$$",
+                        "alternatives": [
+                          {
+                            "activity": {
+                              "title": "string",
+                              "description": "string",
+                              "location": "string",
+                              "bookingInfo": {
+                                "searchQuery": "string or null",
+                                "bookingLink": null
+                              }
+                            }
+                          }
+                        ]
                       },
                       "evening": {
                         "activity": {
@@ -350,7 +409,20 @@ public class ItineraryService {
                             "bookingLink": null
                           }
                         },
-                        "restaurantType": "string"
+                        "restaurantType": "string",
+                        "alternatives": [
+                          {
+                            "activity": {
+                              "title": "string",
+                              "description": "string",
+                              "location": "string",
+                              "bookingInfo": {
+                                "searchQuery": "string or null",
+                                "bookingLink": null
+                              }
+                            }
+                          }
+                        ]
                       },
                       "travelTip": "string"
                     }
@@ -360,21 +432,41 @@ public class ItineraryService {
                 FINAL CHECK BEFORE RESPONDING:
                 - Make sure the JSON is valid.
                 - Make sure the itinerary is realistic.
-                - Make sure the pacing matches the user’s preference.
+                - Make sure the pacing matches the user's preference.
                 - Make sure the last day ends with departure logistics.
+                - Make sure each time slot includes at least 2 alternative activities.
+                - Make sure no activities or alternatives are repeated across the itinerary.
+                - Make sure alternatives offer meaningful variety in activity types.
                 """.formatted(
-                        dto.getOrigin(),
-                        dto.getDestination(),
-                        dto.getStartDate(),
-                        dto.getEndDate(),
-                        dto.getFlexibility(),
-                        dto.getTravelers() + " (" + dto.getTravelerCount() + " people)",
-                        dto.getBudget(),
-                        dto.getAccommodationType(),
-                        dto.getTravelPace(),
-                        combinedInterests,
-                        selectedProfilesContext
-                );
+                dto.getOrigin(),
+                dto.getDestination(),
+                dto.getStartDate(),
+                dto.getEndDate(),
+                dto.getFlexibility(),
+                dto.getTravelers() + " (" + dto.getTravelerCount() + " people)",
+                dto.getBudget(),
+                dto.getAccommodationType(),
+                dto.getTravelPace(),
+                travelerVibeGuidance,
+                combinedInterests,
+                selectedProfilesContext
+        );
+    }
+
+    private String buildTravelerVibeGuidance(String travelers) {
+        String normalizedTravelers = travelers == null ? "" : travelers.trim().toLowerCase(Locale.ROOT);
+        return switch (normalizedTravelers) {
+            case "couple" ->
+                    "Prioritize romantic, intimate experiences like scenic sunsets, cozy dining, and memorable couple activities.";
+            case "friends" ->
+                    "Prioritize fun, social, and energetic experiences like group activities, lively areas, and shared adventures.";
+            case "family" ->
+                    "Prioritize relaxed, family-friendly experiences with kid-safe options, easy logistics, and low-stress pacing.";
+            case "solo" ->
+                    "Prioritize exploration-focused experiences with local discovery, cultural immersion, and independent-friendly options.";
+            default ->
+                    "Match recommendations naturally to the traveler type while keeping activities realistic and personalized.";
+        };
     }
 
     private String buildSelectedProfilesContext(TripGenerationRequestDto dto) {
@@ -431,6 +523,8 @@ public class ItineraryService {
                 - Keep all values as plain JSON types.
                 - Ensure all strings are properly quoted.
                 - Ensure the output is parsable by standard JSON parsers.
+                - Ensure each time slot includes an "alternatives" array with at least 2 alternatives.
+                - Ensure each alternative contains the required activity structure.
 
                 QUALITY RULES:
                 - Keep the itinerary realistic for the destination and dates.
@@ -439,11 +533,13 @@ public class ItineraryService {
                 - Ensure interests are reflected naturally across the trip.
                 - Ensure budget alignment is reasonable.
                 - Do not repeat the same place or primary activity across multiple days.
+                - Do not repeat main activities within the alternatives of the same time slot.
                 - Day 1 must include arrival logistics and check-in.
                 - Final day must include departure logistics returning to origin.
                 - If booking links are not available, keep bookingLink as null.
                 - If estimated costs are not known exactly, keep them as cost tiers only.
                 - Do not invent new facts that were not present in the source unless required to repair structure or realism.
+                - Ensure alternatives offer meaningful variety in activity types and experiences.
 
                 REPAIR PRIORITY:
                 1. Make the JSON valid.
@@ -473,7 +569,20 @@ public class ItineraryService {
                             "bookingLink": null
                           }
                         },
-                        "whyItFits": "string"
+                        "whyItFits": "string",
+                        "alternatives": [
+                          {
+                            "activity": {
+                              "title": "string",
+                              "description": "string",
+                              "location": "string",
+                              "bookingInfo": {
+                                "searchQuery": "string or null",
+                                "bookingLink": null
+                              }
+                            }
+                          }
+                        ]
                       },
                       "afternoon": {
                         "activity": {
@@ -486,7 +595,20 @@ public class ItineraryService {
                           }
                         },
                         "estimatedTime": "string",
-                        "costTier": "Free | $ | $$ | $$$"
+                        "costTier": "Free | $ | $$ | $$$",
+                        "alternatives": [
+                          {
+                            "activity": {
+                              "title": "string",
+                              "description": "string",
+                              "location": "string",
+                              "bookingInfo": {
+                                "searchQuery": "string or null",
+                                "bookingLink": null
+                              }
+                            }
+                          }
+                        ]
                       },
                       "evening": {
                         "activity": {
@@ -498,7 +620,20 @@ public class ItineraryService {
                             "bookingLink": null
                           }
                         },
-                        "restaurantType": "string"
+                        "restaurantType": "string",
+                        "alternatives": [
+                          {
+                            "activity": {
+                              "title": "string",
+                              "description": "string",
+                              "location": "string",
+                              "bookingInfo": {
+                                "searchQuery": "string or null",
+                                "bookingLink": null
+                              }
+                            }
+                          }
+                        ]
                       },
                       "travelTip": "string"
                     }
