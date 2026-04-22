@@ -306,6 +306,10 @@ public class ItineraryService {
                 - Do not repeat the same attraction, area, or primary activity across multiple days.
                 - Strongly prioritize the listed interests.
                 - If interests are empty, create a balanced mix of iconic sightseeing, local food, and leisure.
+                - If Selected Traveler Profiles are provided, give equal weight to (a) direct user trip inputs and (b) selected profile preferences.
+                - Explicitly incorporate selected profile interests, mobility level, and dietary preferences into activity and dining choices.
+                - Balance preferences across the full itinerary so user-level inputs and different selected profiles are all represented.
+                - If user inputs and profile preferences conflict, choose compromise options or alternate priorities by day/time slot while keeping the plan cohesive and practical.
                 - Budget must influence the recommendations:
                   - Cheap → mostly Free or $
                   - Moderate → mix of $ and $$
@@ -329,6 +333,7 @@ public class ItineraryService {
                 - Each alternative must fit the time slot duration and cost tier of the main activity.
                 - Do not repeat any activity (main or alternative) across the entire itinerary.
                 - Alternatives should be realistic and available in the destination.
+                - When profiles are selected, alternatives should offer preference coverage for different selected profiles where possible.
 
                 CONTENT GUIDELINES:
                 - Trip summary should feel personalized and concise.
