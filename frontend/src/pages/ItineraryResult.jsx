@@ -443,6 +443,14 @@ const ItineraryResult = () => {
                     if (day[period]?.activity?.imageUrl !== undefined) {
                         delete day[period].activity.imageUrl;
                     }
+                    // Also strip images from alternatives
+                    if (Array.isArray(day[period]?.alternatives)) {
+                        day[period].alternatives.forEach(alt => {
+                            if (alt?.activity?.imageUrl !== undefined) {
+                                delete alt.activity.imageUrl;
+                            }
+                        });
+                    }
                 });
             });
         }
@@ -488,6 +496,25 @@ const ItineraryResult = () => {
             return;
         }
 
+        // Check if alternatives are already in the itinerary data
+        const dayIndex = dayNumber - 1;
+        const dayData = itineraryData.itinerary?.[dayIndex];
+        const alternativesFromItinerary = dayData?.[timeSlot]?.alternatives;
+
+        if (alternativesFromItinerary && Array.isArray(alternativesFromItinerary) && alternativesFromItinerary.length > 0) {
+            // Use alternatives embedded in the itinerary JSON
+            const cachedData = {
+                alternatives: alternativesFromItinerary,
+                originalActivity: currentActivity,
+                isCached: true
+            };
+            setAlternatives(prev => ({ ...prev, [key]: cachedData }));
+            setCurrentModalAlt({ dayNumber, timeSlot, ...cachedData });
+            setShowAlternativesModal(true);
+            return;
+        }
+
+        // If no embedded alternatives, fall back to API call
         setLoadingAlts(key);
         try {
             const response = await fetch(`http://localhost:8080/api/trips/${tripId}/alternatives`, {
@@ -526,20 +553,11 @@ const ItineraryResult = () => {
      * Handle applying a selected alternative
      */
     const handleApplyAlternative = async (dayNumber, timeSlot, selectedIndex) => {
-        try {
-            const response = await fetch(
-                `http://localhost:8080/api/trips/${tripId}/apply-alternative?dayNumber=${dayNumber}&timeSlot=${timeSlot}&selectedIndex=${selectedIndex}`,
-                { method: 'PUT' }
-            );
+        const key = `${dayNumber}-${timeSlot}`;
+        const alternativesEntry = alternatives[key];
+        const selectedAlt = alternativesEntry?.alternatives?.[selectedIndex];
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            // Update local itinerary with the selected alternative
-            const key = `${dayNumber}-${timeSlot}`;
-            const selectedAlt = alternatives[key]?.alternatives[selectedIndex];
-
+        const applyLocally = () => {
             if (selectedAlt) {
                 setItineraryData(prev => {
                     const updated = JSON.parse(JSON.stringify(prev));
@@ -555,6 +573,25 @@ const ItineraryResult = () => {
 
             setShowAlternativesModal(false);
             alert('Activity updated successfully!');
+        };
+
+        // If alternatives are embedded in the itinerary JSON, apply locally without backend call
+        if (!alternativesEntry?.alternativeId) {
+            applyLocally();
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `http://localhost:8080/api/trips/${tripId}/apply-alternative?dayNumber=${dayNumber}&timeSlot=${timeSlot}&selectedIndex=${selectedIndex}`,
+                { method: 'PUT' }
+            );
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            applyLocally();
         } catch (error) {
             console.error('Error applying alternative:', error);
             alert('Failed to apply alternative. Please try again.');
