@@ -302,28 +302,31 @@ const Dashboard = () => {
     navigate(`/my-trips?search=${encodeURIComponent(trimmedQuery)}`);
   };
 
+  const getCityFromPlace = (place) => String(place || "").split(",")[0].trim();
   const normalizedTripSearchQuery = tripSearchQuery.trim().toLowerCase();
-  const tripSuggestions = normalizedTripSearchQuery
-    ? myTrips
-        .filter((trip) => {
-          const searchableText = [
-            trip.destination,
-            trip.origin,
-            trip.status,
-            trip.startDate,
-            trip.endDate
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
-          return searchableText.includes(normalizedTripSearchQuery);
-        })
-        .slice(0, 6)
+  const citySuggestions = normalizedTripSearchQuery
+    ? Array.from(
+        myTrips.reduce((acc, trip) => {
+          [trip.destination, trip.origin].forEach((place) => {
+            const city = getCityFromPlace(place);
+            if (!city) return;
+            const cityKey = city.toLowerCase();
+            if (!cityKey.includes(normalizedTripSearchQuery)) return;
+            const existing = acc.get(cityKey);
+            if (existing) {
+              existing.tripCount += 1;
+              return;
+            }
+            acc.set(cityKey, { city, tripCount: 1 });
+          });
+          return acc;
+        }, new Map()).values()
+      ).slice(0, 8)
     : [];
 
-  const handleSuggestionSelect = (trip) => {
-    const suggestionQuery = trip.destination || trip.origin || tripSearchQuery.trim();
-    navigate(`/my-trips?search=${encodeURIComponent(suggestionQuery)}`);
+  const handleSuggestionSelect = (city) => {
+    setTripSearchQuery(city);
+    navigate(`/my-trips?search=${encodeURIComponent(city)}`);
   };
 
   return (
@@ -445,19 +448,19 @@ const Dashboard = () => {
                 />
                 {isTripSearchFocused && normalizedTripSearchQuery && (
                   <div className="absolute top-[calc(100%+0.5rem)] left-0 right-0 bg-[#0a0f1d]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-40">
-                    {tripSuggestions.length > 0 ? (
-                      tripSuggestions.map((trip) => (
+                    {citySuggestions.length > 0 ? (
+                      citySuggestions.map((suggestion) => (
                         <button
-                          key={trip.id}
+                          key={suggestion.city}
                           type="button"
-                          onMouseDown={() => handleSuggestionSelect(trip)}
+                          onMouseDown={() => handleSuggestionSelect(suggestion.city)}
                           className="w-full px-4 py-3 text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0"
                         >
                           <p className="text-white font-semibold text-sm truncate">
-                            {trip.destination || "Untitled trip"}
+                            {suggestion.city}
                           </p>
                           <p className="text-slate-400 text-xs truncate">
-                            From {trip.origin || "Unknown"} • {trip.startDate || "Date TBD"}
+                            {suggestion.tripCount} trip{suggestion.tripCount > 1 ? "s" : ""} in your history
                           </p>
                         </button>
                       ))

@@ -315,6 +315,11 @@ public class ItineraryService {
                   - Moderate → mix of $ and $$
                   - Luxury → mostly $$ and $$$
                 - Accommodation advice must match both {accommodationType} and {budget}.
+                - Every accommodation mentioned must have a corresponding booking option.
+                - For each accommodation, provide a reliable booking URL from a well-known platform (Booking.com, Airbnb, Agoda, etc.).
+                - Booking URLs must point to the specific property; if exact property link is unavailable, provide the closest accurate listing.
+                - All accommodation links must be fully qualified HTTPS URLs on official booking platform domains only.
+                - If uncertain about an exact property deep link, provide the platform's official search-results URL for that property/location instead of inventing a path.
                 - Day 1 must include arrival/travel logistics from origin to destination and check-in.
                 - Final day must include departure logistics returning to origin.
                 - Other days should only include logistics if truly needed.
@@ -338,6 +343,8 @@ public class ItineraryService {
                 CONTENT GUIDELINES:
                 - Trip summary should feel personalized and concise.
                 - Accommodation advice should recommend a suitable area or neighborhood, not a fake hotel.
+                - Keep accommodation formatting clean and consistent.
+                - Include structured accommodation booking entries so UI can render a "Check Details" button right after accommodation details.
                 - Activity descriptions should be practical and specific.
                 - Include estimated time and cost tier where required.
                 - Use simple, clean, frontend-friendly text.
@@ -347,6 +354,15 @@ public class ItineraryService {
                 {
                   "tripSummary": "string",
                   "accommodationAdvice": "string",
+                  "accommodationOptions": [
+                    {
+                      "propertyName": "string",
+                      "stayType": "Hotel | Airbnb | Hostel | Guesthouse | Resort | Apartment | Other",
+                      "location": "string",
+                      "platform": "Booking.com | Airbnb | Agoda | Expedia | Hotels.com | Hostelworld | Other",
+                      "checkDetailsUrl": "https://..."
+                    }
+                  ],
                   "itinerary": [
                     {
                       "dayNumber": 1,
@@ -442,6 +458,7 @@ public class ItineraryService {
                 - Make sure each time slot includes at least 2 alternative activities.
                 - Make sure no activities or alternatives are repeated across the itinerary.
                 - Make sure alternatives offer meaningful variety in activity types.
+                - Make sure every accommodation mention has a matching accommodationOptions entry with a usable checkDetailsUrl.
                 """.formatted(
                 dto.getOrigin(),
                 dto.getDestination(),
@@ -530,6 +547,8 @@ public class ItineraryService {
                 - Ensure the output is parsable by standard JSON parsers.
                 - Ensure each time slot includes an "alternatives" array with at least 2 alternatives.
                 - Ensure each alternative contains the required activity structure.
+                - Ensure "accommodationOptions" exists and remains an array when accommodation is mentioned.
+                - Ensure each accommodation checkDetailsUrl is a valid HTTPS URL on an official booking domain.
 
                 QUALITY RULES:
                 - Keep the itinerary realistic for the destination and dates.
@@ -542,9 +561,12 @@ public class ItineraryService {
                 - Day 1 must include arrival logistics and check-in.
                 - Final day must include departure logistics returning to origin.
                 - If booking links are not available, keep bookingLink as null.
+                - For accommodations, do not use null booking links. Provide a valid "checkDetailsUrl" from a reliable booking platform.
+                - If any accommodation URL is invalid or uses an untrusted domain, replace it with an official platform search-results URL.
                 - If estimated costs are not known exactly, keep them as cost tiers only.
                 - Do not invent new facts that were not present in the source unless required to repair structure or realism.
                 - Ensure alternatives offer meaningful variety in activity types and experiences.
+                - Ensure each accommodation mentioned in accommodationAdvice has a corresponding accommodationOptions item.
 
                 REPAIR PRIORITY:
                 1. Make the JSON valid.
@@ -558,6 +580,15 @@ public class ItineraryService {
                 {
                   "tripSummary": "string",
                   "accommodationAdvice": "string",
+                  "accommodationOptions": [
+                    {
+                      "propertyName": "string",
+                      "stayType": "Hotel | Airbnb | Hostel | Guesthouse | Resort | Apartment | Other",
+                      "location": "string",
+                      "platform": "Booking.com | Airbnb | Agoda | Expedia | Hotels.com | Hostelworld | Other",
+                      "checkDetailsUrl": "https://..."
+                    }
+                  ],
                   "itinerary": [
                     {
                       "dayNumber": 1,

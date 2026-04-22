@@ -10,6 +10,7 @@ const MyTrips = () => {
     const [error, setError] = useState("");
     const searchQuery = (new URLSearchParams(location.search).get("search") || "").trim();
     const normalizedSearchQuery = searchQuery.toLowerCase();
+    const getCityFromPlace = (place) => String(place || "").split(",")[0].trim();
 
     useEffect(() => {
         const fetchTrips = async () => {
@@ -76,7 +77,9 @@ const MyTrips = () => {
         ? trips.filter((trip) => {
             const searchableText = [
                 trip.destination,
+                getCityFromPlace(trip.destination),
                 trip.origin,
+                getCityFromPlace(trip.origin),
                 trip.status,
                 trip.startDate,
                 trip.endDate,

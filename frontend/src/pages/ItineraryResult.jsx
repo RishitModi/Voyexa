@@ -110,6 +110,22 @@ const ItineraryResult = () => {
         );
     }
 
+    const buildBookingSearchUrl = (propertyName, location) => {
+        const searchQuery = encodeURIComponent(
+            `${propertyName || ""} ${location || ""}`.trim() || "accommodation"
+        );
+        return `https://www.booking.com/searchresults.html?ss=${searchQuery}`;
+    };
+
+    const accommodationOptions = Array.isArray(itineraryData.accommodationOptions)
+        ? itineraryData.accommodationOptions.map((option) => ({
+            propertyName: option?.propertyName || "Accommodation",
+            location: option?.location || "",
+            platform: "Booking.com",
+            checkDetailsUrl: buildBookingSearchUrl(option?.propertyName, option?.location)
+        }))
+        : [];
+
     /**
      * Draggable Day Component
      */
@@ -885,6 +901,29 @@ const ItineraryResult = () => {
                                 <p className="text-slate-300 text-sm leading-relaxed font-medium">
                                     {itineraryData.accommodationAdvice}
                                 </p>
+                                {accommodationOptions.length > 0 && (
+                                    <div className="mt-4 space-y-3">
+                                        {accommodationOptions.map((option, index) => (
+                                            <div
+                                                key={`${option.propertyName}-${index}`}
+                                                className="rounded-xl border border-white/10 bg-slate-900/40 p-3"
+                                            >
+                                                <p className="text-xs font-bold text-white truncate">
+                                                    {option.propertyName}
+                                                </p>
+                                                <p className="text-[11px] text-slate-400 mb-2">
+                                                    {option.platform}
+                                                </p>
+                                                <button
+                                                    onClick={() => window.open(option.checkDetailsUrl, '_blank', 'noopener,noreferrer')}
+                                                    className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition"
+                                                >
+                                                    Check Details
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </header>
