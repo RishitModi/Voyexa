@@ -8,7 +8,6 @@ import ItineraryResult from "./pages/ItineraryResult";
 import MyTrips from "./pages/MyTrips";
 import SharedTrip from "./pages/SharedTrip";
 import FloatingLines from "./components/FloatingLines";
-import ThemeToggle from "./components/ThemeToggle";
 import LandingPage from "./pages/LandingPage";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 
@@ -43,7 +42,6 @@ function AppShell() {
       className={`relative min-h-screen w-full overflow-hidden transition-colors duration-300 ${appBackground}`}
       style={appBackgroundStyle}
     >
-      <ThemeToggle />
       {!hideBackground && (
         <div className="fixed inset-0 z-0 pointer-events-none">
           <FloatingLines
