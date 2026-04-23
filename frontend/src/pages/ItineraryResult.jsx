@@ -5,6 +5,7 @@ import {
     Hotel, Sparkles, Sunrise, Sun, Sunset,
     Lightbulb, Share2, Download, Check, RefreshCw, X, CheckCircle, GripVertical, Copy, FileText
 } from 'lucide-react';
+import { fetchOnDemandAlternatives } from '../services/alternativesService';
 import {
     DndContext,
     closestCenter,
@@ -512,48 +513,18 @@ const ItineraryResult = () => {
             return;
         }
 
-        // Check if alternatives are already in the itinerary data
         const dayIndex = dayNumber - 1;
         const dayData = itineraryData.itinerary?.[dayIndex];
-        const alternativesFromItinerary = dayData?.[timeSlot]?.alternatives;
-
-        if (alternativesFromItinerary && Array.isArray(alternativesFromItinerary) && alternativesFromItinerary.length > 0) {
-            // Use alternatives embedded in the itinerary JSON
-            const cachedData = {
-                alternatives: alternativesFromItinerary,
-                originalActivity: currentActivity,
-                isCached: true
-            };
-            setAlternatives(prev => ({ ...prev, [key]: cachedData }));
-            setCurrentModalAlt({ dayNumber, timeSlot, ...cachedData });
-            setShowAlternativesModal(true);
-            return;
-        }
-
-        // If no embedded alternatives, fall back to API call
         setLoadingAlts(key);
         try {
-            const response = await fetch(`http://localhost:8080/api/trips/${tripId}/alternatives`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    destination: itineraryData.accommodationAdvice ? itineraryData.accommodationAdvice.split(' ')[0] : 'destination',
-                    budget: 'moderate', // This should come from trip data
-                    currentActivity: currentActivity,
-                    dayNumber: dayNumber,
-                    timeSlot: timeSlot,
-                    numberOfAlternatives: 2,
-                    interests: 'travel,culture,food',
-                    travelPace: 'balanced',
-                    tripSummary: itineraryData.tripSummary
-                })
+            const data = await fetchOnDemandAlternatives(tripId, {
+                currentActivity,
+                dayNumber,
+                timeSlot,
+                numberOfAlternatives: 2,
+                dayContext: dayData || {},
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
             setAlternatives(prev => ({ ...prev, [key]: data }));
             setCurrentModalAlt({ dayNumber, timeSlot, ...data });
             setShowAlternativesModal(true);
@@ -591,7 +562,7 @@ const ItineraryResult = () => {
             alert('Activity updated successfully!');
         };
 
-        // If alternatives are embedded in the itinerary JSON, apply locally without backend call
+        // If the backend did not return an alternativeId, apply locally only.
         if (!alternativesEntry?.alternativeId) {
             applyLocally();
             return;

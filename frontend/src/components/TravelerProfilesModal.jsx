@@ -134,7 +134,7 @@ export default function TravelerProfilesModal({ isOpen, onClose, userId, onProfi
                 <select
                   value={form.relation}
                   onChange={(e) => setForm((prev) => ({ ...prev, relation: e.target.value }))}
-                  className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white"
+                  className="traveler-select px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white"
                 >
                   {RELATIONS.map((option) => <option key={option} value={option}>{option}</option>)}
                 </select>
@@ -149,7 +149,7 @@ export default function TravelerProfilesModal({ isOpen, onClose, userId, onProfi
                 <select
                   value={form.gender}
                   onChange={(e) => setForm((prev) => ({ ...prev, gender: e.target.value }))}
-                  className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white"
+                  className="traveler-select px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white"
                 >
                   <option value="">gender</option>
                   {GENDERS.map((option) => <option key={option} value={option}>{option}</option>)}
@@ -157,7 +157,7 @@ export default function TravelerProfilesModal({ isOpen, onClose, userId, onProfi
                 <select
                   value={form.dietaryPreferences}
                   onChange={(e) => setForm((prev) => ({ ...prev, dietaryPreferences: e.target.value }))}
-                  className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white"
+                  className="traveler-select px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white"
                 >
                   <option value="">diet</option>
                   {DIETARY.map((option) => <option key={option} value={option}>{option}</option>)}
@@ -167,7 +167,7 @@ export default function TravelerProfilesModal({ isOpen, onClose, userId, onProfi
                 <select
                   value={form.mobilityLevel}
                   onChange={(e) => setForm((prev) => ({ ...prev, mobilityLevel: e.target.value }))}
-                  className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white"
+                  className="traveler-select px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white"
                 >
                   <option value="">mobility</option>
                   {MOBILITY.map((option) => <option key={option} value={option}>{option}</option>)}

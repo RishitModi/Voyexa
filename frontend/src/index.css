@@ -127,6 +127,27 @@ html.theme-light [class*="text-emerald-"] {
   color: #047857 !important;
 }
 
+.traveler-select {
+  color: #e2e8f0;
+  background-color: rgba(15, 23, 42, 0.55);
+}
+
+.traveler-select option {
+  color: #0f172a;
+  background-color: #f8fafc;
+}
+
+html.theme-light .traveler-select {
+  color: #0f172a;
+  background-color: rgba(239, 246, 255, 0.95);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+html.theme-light .traveler-select option {
+  color: #0f172a;
+  background-color: #ffffff;
+}
+
 @media print {
   @page {
     margin: 10mm;
