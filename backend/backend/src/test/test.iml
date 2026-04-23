@@ -7,5 +7,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.junit.jupiter:junit-jupiter-api:6.0.3" level="project" />
+    <orderEntry type="module" module-name="main" scope="TEST" />
   </component>
 </module>

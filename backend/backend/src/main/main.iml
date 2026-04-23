@@ -19,5 +19,8 @@
     <orderEntry type="library" name="Maven: org.springframework.security:spring-security-core:7.0.3" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-databind:2.20.2" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-core:2.20.2" level="project" />
+    <orderEntry type="library" name="Maven: jakarta.transaction:jakarta.transaction-api:2.0.1" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework.data:spring-data-jpa:4.0.3" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework.data:spring-data-commons:4.0.3" level="project" />
   </component>
 </module>

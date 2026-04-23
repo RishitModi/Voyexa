@@ -2,6 +2,7 @@ package com.voyexa.backend.services;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -14,7 +15,7 @@ class PexelsImageServiceTest {
 
     @Test
     void buildSearchQueriesCreatesOrderedFocusedFallbacks() {
-        List<String> queries = service.buildSearchQueries("Visit the Eiffel Tower", "Paris");
+        List<String> queries = Collections.singletonList(service.buildQuery("Visit the Eiffel Tower", "Paris"));
 
         assertFalse(queries.isEmpty());
         assertEquals("Visit the Eiffel Tower Paris", queries.get(0));

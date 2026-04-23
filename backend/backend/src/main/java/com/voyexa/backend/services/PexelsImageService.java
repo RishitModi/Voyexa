@@ -28,8 +28,7 @@ public class PexelsImageService {
 
     private static final Logger log = LoggerFactory.getLogger(PexelsImageService.class);
     private static final String SEARCH_URL = "https://api.pexels.com/v1/search";
-    private static final int PER_PAGE = 5;
-    private static final double CONFIDENCE_THRESHOLD = 1.2;
+    private static final int PER_PAGE = 1;
     private static final Set<String> TITLE_STOP_WORDS = Set.of(
             "a", "an", "the", "to", "at", "in", "on", "for", "of", "and", "or",
             "visit", "explore", "discover", "experience", "enjoy", "walk", "stroll"
@@ -52,38 +51,33 @@ public class PexelsImageService {
         return fetchImageForActivity(query, "");
     }
 
-    /**
-     * Fetches a relevant image using short, focused fallback queries.
-     */
-    public String fetchImageForActivity(String title, String location) {
+    public String fetchImageForActivity(String titleOrQuery, String location) {
         if (pexelsApiKey == null || pexelsApiKey.isBlank() || pexelsApiKey.startsWith("YOUR_")) {
             log.warn("Pexels API key not configured. Using fallback image.");
             return getDefaultImage();
         }
 
         try {
-            List<String> queries = buildSearchQueries(title, location);
-            Candidate bestCandidate = null;
+            String primaryQuery = buildQuery(titleOrQuery, location);
+            String primaryResponse = callPexels(primaryQuery);
+            String primaryUrl = extractFirstImageUrl(primaryResponse);
+            if (primaryUrl != null) {
+                return primaryUrl;
+            }
 
-            for (String query : queries) {
-                Candidate candidate = searchBestCandidateForQuery(query);
-                if (candidate == null) {
-                    continue;
-                }
-
-                if (bestCandidate == null || candidate.score() > bestCandidate.score()) {
-                    bestCandidate = candidate;
-                }
-
-                if (candidate.score() >= CONFIDENCE_THRESHOLD) {
-                    return candidate.url();
+            String fallbackQuery = sanitizeForQuery(location);
+            if (!fallbackQuery.isBlank()) {
+                String fallbackResponse = callPexels(fallbackQuery + " travel");
+                String fallbackUrl = extractFirstImageUrl(fallbackResponse);
+                if (fallbackUrl != null) {
+                    return fallbackUrl;
                 }
             }
 
-            return bestCandidate != null ? bestCandidate.url() : getDefaultImage();
+            return getDefaultImage();
 
         } catch (RestClientException e) {
-            log.warn("Error calling Pexels API for activity '{} {}': {}", title, location, e.getMessage());
+            log.warn("Error calling Pexels API for query='{}', location='{}': {}", titleOrQuery, location, e);
             return getDefaultImage();
         } catch (Exception e) {
             log.error("Unexpected error fetching image from Pexels", e);
@@ -91,26 +85,36 @@ public class PexelsImageService {
         }
     }
 
-    List<String> buildSearchQueries(String rawTitle, String rawLocation) {
-        String title = sanitizeForQuery(rawTitle);
+    List<String> buildSearchQueries(String rawTitleOrQuery, String rawLocation) {
+        String query = sanitizeForQuery(rawTitleOrQuery);
         String location = sanitizeForQuery(rawLocation);
-        String coreTitle = simplifyTitle(title);
+        String simplified = simplifyTitle(query);
 
         LinkedHashSet<String> ordered = new LinkedHashSet<>();
-        addIfValid(ordered, joinQuery(title, location));
-        addIfValid(ordered, joinQuery(coreTitle, location));
-        addIfValid(ordered, title);
-        addIfValid(ordered, coreTitle);
+        if (!query.isBlank() && !location.isBlank()) {
+            ordered.add(query + " " + location);
+        } else if (!query.isBlank()) {
+            ordered.add(query);
+        } else if (!location.isBlank()) {
+            ordered.add(location + " travel");
+        }
+
+        if (!simplified.isBlank()) {
+            if (!location.isBlank()) {
+                ordered.add(simplified + " " + location);
+            }
+            ordered.add(simplified);
+        }
+
         if (!location.isBlank()) {
-            addIfValid(ordered, joinQuery(location, "travel"));
+            ordered.add(location + " travel");
+        }
+
+        if (ordered.isEmpty()) {
+            ordered.add("travel destination");
         }
 
         return new ArrayList<>(ordered);
-    }
-
-    private Candidate searchBestCandidateForQuery(String query) {
-        String jsonResponse = callPexels(query);
-        return parseBestCandidate(jsonResponse, query);
     }
 
     private String callPexels(String query) {
@@ -130,7 +134,7 @@ public class PexelsImageService {
         return response.getBody();
     }
 
-    private Candidate parseBestCandidate(String jsonResponse, String query) {
+    private String extractFirstImageUrl(String jsonResponse) {
         if (jsonResponse == null || jsonResponse.isBlank()) {
             return null;
         }
@@ -141,43 +145,12 @@ public class PexelsImageService {
             if (!photos.isArray() || photos.isEmpty()) {
                 return null;
             }
-
-            Set<String> queryTokens = tokenize(query);
-            Candidate best = null;
-
-            for (JsonNode photo : photos) {
-                JsonNode src = photo.path("src");
-                String imageUrl = pickBestSrcUrl(src);
-                if (imageUrl == null) {
-                    continue;
-                }
-
-                double score = scorePhoto(photo, queryTokens);
-                Candidate current = new Candidate(imageUrl, score);
-
-                if (best == null || current.score() > best.score()) {
-                    best = current;
-                }
-            }
-
-            return best;
+            JsonNode firstPhoto = photos.get(0);
+            return pickBestSrcUrl(firstPhoto.path("src"));
         } catch (Exception e) {
             log.warn("Failed to parse Pexels response: {}", e.getMessage());
             return null;
         }
-    }
-
-    private double scorePhoto(JsonNode photo, Set<String> queryTokens) {
-        String alt = sanitizeForQuery(photo.path("alt").asText(""));
-        Set<String> altTokens = tokenize(alt);
-        long overlap = queryTokens.stream().filter(altTokens::contains).count();
-
-        int width = photo.path("width").asInt(0);
-        int height = photo.path("height").asInt(0);
-        double landscapeBoost = (width > 0 && height > 0 && width > height) ? 0.2 : 0.0;
-
-        double overlapScore = queryTokens.isEmpty() ? 0.0 : ((double) overlap / queryTokens.size());
-        return overlapScore + landscapeBoost;
     }
 
     private String pickBestSrcUrl(JsonNode src) {
@@ -204,12 +177,20 @@ public class PexelsImageService {
         return null;
     }
 
-    private String sanitizeForQuery(String text) {
-        if (text == null) {
-            return "";
+    String buildQuery(String rawTitleOrQuery, String rawLocation) {
+        String query = sanitizeForQuery(rawTitleOrQuery);
+        String location = sanitizeForQuery(rawLocation);
+
+        if (!query.isBlank() && !location.isBlank()) {
+            return query + " " + location;
         }
-        String cleaned = text.replaceAll("[^a-zA-Z0-9 ]", " ").replaceAll("\\s+", " ").trim();
-        return cleaned.length() > 100 ? cleaned.substring(0, 100).trim() : cleaned;
+        if (!query.isBlank()) {
+            return query;
+        }
+        if (!location.isBlank()) {
+            return location + " travel";
+        }
+        return "travel destination";
     }
 
     private String simplifyTitle(String title) {
@@ -218,39 +199,23 @@ public class PexelsImageService {
         }
 
         String simplified = Arrays.stream(title.split("\\s+"))
-                .map(String::toLowerCase)
+                .map(token -> token.toLowerCase(Locale.ROOT))
                 .filter(token -> !TITLE_STOP_WORDS.contains(token))
                 .collect(Collectors.joining(" "));
 
         return simplified.isBlank() ? title : simplified;
     }
 
-    private Set<String> tokenize(String text) {
-        if (text == null || text.isBlank()) {
-            return Set.of();
+    private String sanitizeForQuery(String text) {
+        if (text == null) {
+            return "";
         }
-
-        return Arrays.stream(text.toLowerCase(Locale.ROOT).split("\\s+"))
-                .filter(token -> token.length() > 2)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-    }
-
-    private String joinQuery(String part1, String part2) {
-        String combined = ((part1 == null ? "" : part1) + " " + (part2 == null ? "" : part2)).trim();
-        return combined.replaceAll("\\s+", " ");
-    }
-
-    private void addIfValid(Set<String> target, String query) {
-        if (query != null && !query.isBlank()) {
-            target.add(query);
-        }
+        String cleaned = text.replaceAll("[^a-zA-Z0-9 ]", " ").replaceAll("\\s+", " ").trim();
+        return cleaned.length() > 100 ? cleaned.substring(0, 100).trim() : cleaned;
     }
 
     private boolean isNotBlank(String value) {
         return value != null && !value.isBlank();
-    }
-
-    private record Candidate(String url, double score) {
     }
 
     private String getDefaultImage() {

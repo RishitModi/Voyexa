@@ -2,6 +2,7 @@ package com.voyexa.backend.controller;
 
 import com.voyexa.backend.DTOS.AlternativeGenerationRequestDto;
 import com.voyexa.backend.DTOS.AlternativeGenerationResponseDto;
+import com.voyexa.backend.DTOS.OnDemandAlternativeRequestDto;
 import com.voyexa.backend.DTOS.PlaceDto;
 import com.voyexa.backend.DTOS.ReorderItineraryRequestDto;
 import com.voyexa.backend.DTOS.TripForkRequestDto;
@@ -15,6 +16,7 @@ import com.voyexa.backend.entities.Trip;
 import com.voyexa.backend.services.ActivityAlternativeService;
 import com.voyexa.backend.services.ExternalPlaceService;
 import com.voyexa.backend.services.ItineraryService;
+import com.voyexa.backend.services.OnDemandAlternativeService;
 import com.voyexa.backend.services.TripService;
 import com.voyexa.backend.services.TripShareService;
 import jakarta.validation.Valid;
@@ -37,6 +39,7 @@ public class TripController {
     private final TripService tripService;
     private final ItineraryService itineraryService;
     private final ActivityAlternativeService activityAlternativeService;
+    private final OnDemandAlternativeService onDemandAlternativeService;
     private final TripShareService tripShareService;
 
     public TripController(
@@ -44,11 +47,13 @@ public class TripController {
             TripService tripService,
             ItineraryService itineraryService,
             ActivityAlternativeService activityAlternativeService,
+            OnDemandAlternativeService onDemandAlternativeService,
             TripShareService tripShareService) {
         this.externalPlaceService = externalPlaceService;
         this.tripService = tripService;
         this.itineraryService = itineraryService;
         this.activityAlternativeService = activityAlternativeService;
+        this.onDemandAlternativeService = onDemandAlternativeService;
         this.tripShareService = tripShareService;
     }
 
@@ -123,6 +128,24 @@ public class TripController {
         try {
             requestDto.setTripId(tripId);
             AlternativeGenerationResponseDto response = activityAlternativeService.getAlternatives(requestDto);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * On-demand alternatives endpoint used only when user explicitly clicks "Get Alternatives".
+     * Generates (or returns cached) alternatives for one day/time slot.
+     */
+    @PostMapping("/{tripId}/alternatives/on-demand")
+    public ResponseEntity<AlternativeGenerationResponseDto> getOnDemandAlternatives(
+            @PathVariable UUID tripId,
+            @Valid @RequestBody OnDemandAlternativeRequestDto requestDto) {
+        try {
+            AlternativeGenerationResponseDto response = onDemandAlternativeService.getAlternatives(tripId, requestDto);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();

@@ -117,9 +117,12 @@ public class ItineraryService {
             log.info("Validator Agent responded.");
         }
 
-        // Step 5: Asynchronously fetch and inject Pexels images for each activity tree
+        // Step 5: Return initial itinerary without embedded alternatives.
+        String itineraryWithoutAlternatives = stripAlternativesFromItinerary(finalJsonResponse);
+
+        // Step 6: Asynchronously fetch and inject Pexels images for each activity tree
         log.info("Injecting dynamic images from Pexels...");
-        return injectImagesIntoItinerary(finalJsonResponse);
+        return injectImagesIntoItinerary(itineraryWithoutAlternatives);
     }
 
     private String callAiModel(String prompt, Queue<String> apiKeys) {
@@ -164,7 +167,7 @@ public class ItineraryService {
                 }
 
             } catch (RestClientException e) {
-                log.warn("Error calling Gemini API: {}, trying next key...", e.getMessage());
+                log.warn("Error calling Gemini API, trying next key...", e);
             }
 
             // Push to back of queue to preserve the key for future calls even if it failed (e.g. rate limit)
@@ -195,6 +198,30 @@ public class ItineraryService {
         return rawText.replace("```json", "").replace("```", "").trim();
     }
 
+    private String stripAlternativesFromItinerary(String json) {
+        try {
+            JsonNode root = objectMapper.readTree(json);
+            JsonNode itineraryArray = root.path("itinerary");
+            if (!itineraryArray.isArray()) {
+                return json;
+            }
+
+            for (JsonNode dayNode : itineraryArray) {
+                String[] times = {"morning", "afternoon", "evening"};
+                for (String time : times) {
+                    JsonNode timeNode = dayNode.path(time);
+                    if (timeNode.isObject()) {
+                        ((ObjectNode) timeNode).remove("alternatives");
+                    }
+                }
+            }
+            return objectMapper.writeValueAsString(root);
+        } catch (Exception e) {
+            log.warn("Failed to strip embedded alternatives from itinerary JSON: {}", e.getMessage());
+            return json;
+        }
+    }
+
     public String injectImagesIntoItinerary(String json) {
         try {
             JsonNode root = objectMapper.readTree(json);
@@ -212,10 +239,11 @@ public class ItineraryService {
                         if (activityNode.isObject()) {
                             String title = activityNode.path("title").asText("");
                             String location = activityNode.path("location").asText("");
+                            String imageQuery = extractImageQuery(activityNode, title, location);
 
-                            if (!title.isEmpty()) {
+                            if (!imageQuery.isEmpty()) {
                                 java.util.concurrent.CompletableFuture<Void> future = java.util.concurrent.CompletableFuture.runAsync(() -> {
-                                    String imageUrl = pexelsImageService.fetchImageForActivity(title, location);
+                                    String imageUrl = pexelsImageService.fetchImageForActivity(imageQuery, location);
                                     ((ObjectNode) activityNode).put("imageUrl", imageUrl);
                                 });
                                 futures.add(future);
@@ -230,10 +258,11 @@ public class ItineraryService {
                                 if (altActivityNode.isObject()) {
                                     String altTitle = altActivityNode.path("title").asText("");
                                     String altLocation = altActivityNode.path("location").asText("");
+                                    String altImageQuery = extractImageQuery(altActivityNode, altTitle, altLocation);
 
-                                    if (!altTitle.isEmpty()) {
+                                    if (!altImageQuery.isEmpty()) {
                                         java.util.concurrent.CompletableFuture<Void> altFuture = java.util.concurrent.CompletableFuture.runAsync(() -> {
-                                            String imageUrl = pexelsImageService.fetchImageForActivity(altTitle, altLocation);
+                                            String imageUrl = pexelsImageService.fetchImageForActivity(altImageQuery, altLocation);
                                             ((ObjectNode) altActivityNode).put("imageUrl", imageUrl);
                                         });
                                         futures.add(altFuture);
@@ -254,6 +283,22 @@ public class ItineraryService {
             log.error("Failed to inject images into itinerary JSON", e);
             return json;
         }
+    }
+
+    private String extractImageQuery(JsonNode activityNode, String title, String location) {
+        String imageQuery = activityNode.path("imageQuery").asText("").trim();
+        if (!imageQuery.isBlank()) {
+            return imageQuery;
+        }
+        String titleText = title == null ? "" : title.trim();
+        String locationText = location == null ? "" : location.trim();
+        if (!titleText.isBlank() && !locationText.isBlank()) {
+            return titleText + " " + locationText;
+        }
+        if (!titleText.isBlank()) {
+            return titleText;
+        }
+        return locationText;
     }
 
     //<editor-fold desc="Prompt Building and DTOs">
@@ -346,6 +391,7 @@ public class ItineraryService {
                 - Keep accommodation formatting clean and consistent.
                 - Include structured accommodation booking entries so UI can render a "Check Details" button right after accommodation details.
                 - Activity descriptions should be practical and specific.
+                - Every activity object (main + alternatives) must include "imageQuery": a short one-line photo search phrase containing the place and scene (e.g., "Shibuya crossing Tokyo at night").
                 - Include estimated time and cost tier where required.
                 - Use simple, clean, frontend-friendly text.
                 - For each activity time slot, generate 2 alternative activities that offer different experiences.
@@ -374,6 +420,7 @@ public class ItineraryService {
                           "title": "string",
                           "description": "string",
                           "location": "string",
+                          "imageQuery": "string",
                           "bookingInfo": {
                             "searchQuery": "string or null",
                             "bookingLink": null
@@ -386,6 +433,7 @@ public class ItineraryService {
                               "title": "string",
                               "description": "string",
                               "location": "string",
+                              "imageQuery": "string",
                               "bookingInfo": {
                                 "searchQuery": "string or null",
                                 "bookingLink": null
@@ -399,6 +447,7 @@ public class ItineraryService {
                           "title": "string",
                           "description": "string",
                           "location": "string",
+                          "imageQuery": "string",
                           "bookingInfo": {
                             "searchQuery": "string or null",
                             "bookingLink": null
@@ -412,6 +461,7 @@ public class ItineraryService {
                               "title": "string",
                               "description": "string",
                               "location": "string",
+                              "imageQuery": "string",
                               "bookingInfo": {
                                 "searchQuery": "string or null",
                                 "bookingLink": null
@@ -425,6 +475,7 @@ public class ItineraryService {
                           "title": "string",
                           "description": "string",
                           "location": "string",
+                          "imageQuery": "string",
                           "bookingInfo": {
                             "searchQuery": "string or null",
                             "bookingLink": null
@@ -437,6 +488,7 @@ public class ItineraryService {
                               "title": "string",
                               "description": "string",
                               "location": "string",
+                              "imageQuery": "string",
                               "bookingInfo": {
                                 "searchQuery": "string or null",
                                 "bookingLink": null
@@ -547,6 +599,7 @@ public class ItineraryService {
                 - Ensure the output is parsable by standard JSON parsers.
                 - Ensure each time slot includes an "alternatives" array with at least 2 alternatives.
                 - Ensure each alternative contains the required activity structure.
+                - Ensure every activity object (main + alternatives) contains a non-empty "imageQuery" string.
                 - Ensure "accommodationOptions" exists and remains an array when accommodation is mentioned.
                 - Ensure each accommodation checkDetailsUrl is a valid HTTPS URL on an official booking domain.
 
@@ -600,6 +653,7 @@ public class ItineraryService {
                           "title": "string",
                           "description": "string",
                           "location": "string",
+                          "imageQuery": "string",
                           "bookingInfo": {
                             "searchQuery": "string or null",
                             "bookingLink": null
@@ -612,6 +666,7 @@ public class ItineraryService {
                               "title": "string",
                               "description": "string",
                               "location": "string",
+                              "imageQuery": "string",
                               "bookingInfo": {
                                 "searchQuery": "string or null",
                                 "bookingLink": null
@@ -625,6 +680,7 @@ public class ItineraryService {
                           "title": "string",
                           "description": "string",
                           "location": "string",
+                          "imageQuery": "string",
                           "bookingInfo": {
                             "searchQuery": "string or null",
                             "bookingLink": null
@@ -638,6 +694,7 @@ public class ItineraryService {
                               "title": "string",
                               "description": "string",
                               "location": "string",
+                              "imageQuery": "string",
                               "bookingInfo": {
                                 "searchQuery": "string or null",
                                 "bookingLink": null
@@ -651,6 +708,7 @@ public class ItineraryService {
                           "title": "string",
                           "description": "string",
                           "location": "string",
+                          "imageQuery": "string",
                           "bookingInfo": {
                             "searchQuery": "string or null",
                             "bookingLink": null
@@ -663,6 +721,7 @@ public class ItineraryService {
                               "title": "string",
                               "description": "string",
                               "location": "string",
+                              "imageQuery": "string",
                               "bookingInfo": {
                                 "searchQuery": "string or null",
                                 "bookingLink": null
