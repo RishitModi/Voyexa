@@ -22,6 +22,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+const API = import.meta.env.VITE_API_URL;
+
 const ItineraryResult = () => {
     const location = useLocation();
     const navigate = useNavigate();
@@ -81,7 +83,7 @@ const ItineraryResult = () => {
 
         if (needsImages) {
             setIsInjectingImages(true);
-            fetch('http://localhost:8080/api/trips/inject-images', {
+            fetch(`${API}/api/trips/inject-images`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(itineraryData)
@@ -514,7 +516,7 @@ const ItineraryResult = () => {
         setIsSaving(true);
         try {
             const pruned = stripImages(itineraryData);
-            const response = await fetch(`http://localhost:8080/api/trips/${tripId}/itinerary`, {
+            const response = await fetch(`${API}/api/trips/${tripId}/itinerary`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(pruned)
@@ -602,7 +604,7 @@ const ItineraryResult = () => {
 
         try {
             const response = await fetch(
-                `http://localhost:8080/api/trips/${tripId}/apply-alternative?dayNumber=${dayNumber}&timeSlot=${timeSlot}&selectedIndex=${selectedIndex}`,
+                `${API}/api/trips/${tripId}/apply-alternative?dayNumber=${dayNumber}&timeSlot=${timeSlot}&selectedIndex=${selectedIndex}`,
                 { method: 'PUT' }
             );
 
@@ -642,7 +644,7 @@ const ItineraryResult = () => {
 
                 // Save to backend
                 try {
-                    const response = await fetch(`http://localhost:8080/api/trips/${tripId}/reorder`, {
+                    const response = await fetch(`${API}/api/trips/${tripId}/reorder`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -672,7 +674,7 @@ const ItineraryResult = () => {
 
         setIsForkingSaving(true);
         try {
-            const response = await fetch(`http://localhost:8080/api/trips/${tripId}/fork`, {
+            const response = await fetch(`${API}/api/trips/${tripId}/fork`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -705,7 +707,7 @@ const ItineraryResult = () => {
         try {
             // Get userId from localStorage or pass it
             const userId = localStorage.getItem('userId') || 1;
-            const response = await fetch(`http://localhost:8080/api/trips/${tripId}/share?userId=${userId}`, {
+            const response = await fetch(`${API}/api/trips/${tripId}/share?userId=${userId}`, {
                 method: 'POST'
             });
 

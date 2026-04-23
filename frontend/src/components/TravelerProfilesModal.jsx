@@ -5,6 +5,7 @@ const RELATIONS = ["self", "spouse", "child", "parent", "friend", "other"];
 const GENDERS = ["male", "female", "other"];
 const DIETARY = ["veg", "non_veg", "vegan"];
 const MOBILITY = ["none", "limited_walking", "wheelchair", "elderly_friendly"];
+const API = import.meta.env.VITE_API_URL;
 
 const emptyForm = {
   name: "",
@@ -33,7 +34,7 @@ export default function TravelerProfilesModal({ isOpen, onClose, userId, onProfi
   const fetchProfiles = async () => {
     setError("");
     try {
-      const res = await fetch(`http://localhost:8080/api/traveler-profiles/user/${userId}`);
+      const res = await fetch(`${API}/api/traveler-profiles/user/${userId}`);
       if (!res.ok) throw new Error("Unable to load traveler profiles.");
       const data = await res.json();
       setProfiles(Array.isArray(data) ? data : []);
@@ -66,7 +67,7 @@ export default function TravelerProfilesModal({ isOpen, onClose, userId, onProfi
     };
 
     try {
-      const res = await fetch("http://localhost:8080/api/traveler-profiles", {
+      const res = await fetch(`${API}/api/traveler-profiles`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -88,7 +89,7 @@ export default function TravelerProfilesModal({ isOpen, onClose, userId, onProfi
     if (!userId) return;
     try {
       const res = await fetch(
-        `http://localhost:8080/api/traveler-profiles/${profileId}?userId=${userId}`,
+        `${API}/api/traveler-profiles/${profileId}?userId=${userId}`,
         { method: "DELETE" },
       );
       if (!res.ok) {

@@ -32,7 +32,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/trips")
-@CrossOrigin(origins = "http://localhost:5173")
 public class TripController {
 
     private final ExternalPlaceService externalPlaceService;

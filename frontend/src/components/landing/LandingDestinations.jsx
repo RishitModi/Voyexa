@@ -6,10 +6,11 @@ export const SCROLL_DURATION = 40;
 
 /**
  * Data source (same as Dashboard.jsx):
- * GET http://localhost:8080/api/dashboard/trending
+ * GET ${API}/api/dashboard/trending
  * Shape (DestinationDto): { city, country, description, budget, imageUrl }
  */
-const TRENDING_ENDPOINT = 'http://localhost:8080/api/dashboard/trending';
+const API = import.meta.env.VITE_API_URL;
+const TRENDING_ENDPOINT = `${API}/api/dashboard/trending`;
 
 const LandingDestinations = () => {
   const navigate = useNavigate();

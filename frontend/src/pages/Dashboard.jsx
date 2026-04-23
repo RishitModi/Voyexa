@@ -21,6 +21,7 @@ import UserProfileModal from "../components/UserProfileModal";
 import TravelerProfilesModal from "../components/TravelerProfilesModal";
 
 gsap.registerPlugin(ScrollTrigger);
+const API = import.meta.env.VITE_API_URL;
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -64,7 +65,7 @@ const Dashboard = () => {
     
     const fetchTrending = async () => {
       try {
-        const res = await fetch("http://localhost:8080/api/dashboard/trending");
+        const res = await fetch(`${API}/api/dashboard/trending`);
         if (res.ok) {
           const data = await res.json();
           setTrendingPlaces(data);
@@ -83,7 +84,7 @@ const Dashboard = () => {
 
     const fetchMyTrips = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/api/trips/user/${userId}`);
+        const response = await fetch(`${API}/api/trips/user/${userId}`);
         if (response.ok) {
           const data = await response.json();
           setMyTrips(Array.isArray(data) ? data : []);

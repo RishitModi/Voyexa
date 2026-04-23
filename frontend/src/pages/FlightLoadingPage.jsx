@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import FlightLoader from "../components/FlightLoader";
 
+const API = import.meta.env.VITE_API_URL;
+
 const FlightLoadingPage = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
@@ -28,7 +30,7 @@ const FlightLoadingPage = () => {
       setResult(null);
 
       try {
-        const response = await fetch("http://localhost:8080/api/trips/generate", {
+        const response = await fetch(`${API}/api/trips/generate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -68,7 +70,7 @@ const FlightLoadingPage = () => {
           if (cancelled) return;
 
           const pollResponse = await fetch(
-            `http://localhost:8080/api/trips/${data.tripId}/itinerary`,
+            `${API}/api/trips/${data.tripId}/itinerary`,
             {
               headers: { "Content-Type": "application/json" },
             }

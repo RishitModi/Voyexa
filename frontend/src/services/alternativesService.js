@@ -1,4 +1,5 @@
-const API_BASE = "http://localhost:8080/api/trips";
+const API = import.meta.env.VITE_API_URL;
+const API_BASE = `${API}/api/trips`;
 
 export async function fetchOnDemandAlternatives(tripId, payload) {
   const response = await fetch(`${API_BASE}/${tripId}/alternatives/on-demand`, {

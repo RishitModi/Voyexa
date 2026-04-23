@@ -16,6 +16,8 @@ import {
     Minus
 } from "lucide-react";
 
+const API = import.meta.env.VITE_API_URL;
+
 const LocationAutocomplete = ({
     icon: Icon,
     title,
@@ -51,7 +53,7 @@ const LocationAutocomplete = ({
         setLoading(true);
         try {
             const response = await fetch(
-                `http://localhost:8080/api/trips/places/search?query=${encodeURIComponent(query)}`
+                `${API}/api/trips/places/search?query=${encodeURIComponent(query)}`
             );
             if (response.ok) {
                 const data = await response.json();
@@ -211,7 +213,7 @@ const CreateTrip = () => {
         const fetchProfiles = async () => {
             setProfilesLoading(true);
             try {
-                const response = await fetch(`http://localhost:8080/api/traveler-profiles/user/${userId}`);
+                const response = await fetch(`${API}/api/traveler-profiles/user/${userId}`);
                 if (!response.ok) {
                     throw new Error("Unable to load traveler profiles.");
                 }

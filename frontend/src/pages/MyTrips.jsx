@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Calendar, MapPin, Compass, Clock, Plane, Sparkles, ChevronRight } from "lucide-react";
 
+const API = import.meta.env.VITE_API_URL;
+
 const MyTrips = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -24,7 +26,7 @@ const MyTrips = () => {
             }
 
             try {
-                const response = await fetch(`http://localhost:8080/api/trips/user/${userId}`);
+                const response = await fetch(`${API}/api/trips/user/${userId}`);
                 if (!response.ok) {
                     throw new Error("Failed to fetch trips from server.");
                 }

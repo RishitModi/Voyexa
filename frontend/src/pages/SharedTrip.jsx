@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Hotel, Sunrise, Sun, Sunset, Lightbulb, Info, MapPin, Clock } from 'lucide-react';
 import FloatingLines from '../components/FloatingLines';
 
+const API = import.meta.env.VITE_API_URL;
+
 const SharedTrip = () => {
     const { shareToken } = useParams();
     const navigate = useNavigate();
@@ -13,7 +15,7 @@ const SharedTrip = () => {
     useEffect(() => {
         const fetchSharedTrip = async () => {
             try {
-                const response = await fetch(`http://localhost:8080/api/trips/shared/${shareToken}`);
+                const response = await fetch(`${API}/api/trips/shared/${shareToken}`);
                 if (!response.ok) {
                     throw new Error('Trip not found or expired');
                 }

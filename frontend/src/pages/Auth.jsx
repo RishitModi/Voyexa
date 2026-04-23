@@ -14,6 +14,8 @@ import {
   EyeOff,
 } from "lucide-react";
 
+const API = import.meta.env.VITE_API_URL;
+
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState("");
@@ -48,8 +50,8 @@ const Auth = () => {
     setLoading(true);
 
     const url = isLogin
-      ? "http://localhost:8080/api/users/login"
-      : "http://localhost:8080/api/users/register";
+      ? `${API}/api/users/login`
+      : `${API}/api/users/register`;
 
     const payload = isLogin
       ? { email, password }
