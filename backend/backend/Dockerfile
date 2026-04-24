@@ -4,9 +4,7 @@ WORKDIR /app
 
 COPY . .
 
-# Handle repo-root, backend/, or backend/backend/ build contexts.
-RUN if [ -f /app/pom.xml ]; then mvn -f /app/pom.xml clean package -DskipTests; \
-    elif [ -f /app/backend/pom.xml ]; then mvn -f /app/backend/pom.xml clean package -DskipTests; \
-    else mvn -f /app/backend/backend/pom.xml clean package -DskipTests; fi
+# Build from repo root where pom.xml is /app/backend/backend/pom.xml.
+RUN mvn -f /app/backend/backend/pom.xml clean package -DskipTests
 
-CMD ["sh", "-c", "if ls /app/target/*.jar >/dev/null 2>&1; then java -jar /app/target/*.jar; elif ls /app/backend/target/*.jar >/dev/null 2>&1; then java -jar /app/backend/target/*.jar; else java -jar /app/backend/backend/target/*.jar; fi"]
+CMD ["sh", "-c", "java -jar /app/backend/backend/target/*.jar"]
