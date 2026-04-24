@@ -4,6 +4,8 @@ WORKDIR /app
 
 COPY . .
 
+WORKDIR /app/backend/backend
+
 RUN mvn clean package -DskipTests
 
 CMD ["sh", "-c", "java -jar target/*.jar"]
