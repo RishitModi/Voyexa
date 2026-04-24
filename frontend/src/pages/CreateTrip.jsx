@@ -13,7 +13,8 @@ import {
     Users2,
     Ship,
     Plus,
-    Minus
+    Minus,
+    X
 } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL;
@@ -166,6 +167,156 @@ const LocationAutocomplete = ({
     );
 };
 
+// ── Multi-destination picker ──────────────────────────────────────────────────
+const MultiDestinationInput = ({ destinations, onAdd, onRemove, onNext, onBack }) => {
+    const [inputValue, setInputValue] = useState("");
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const MAX_DESTINATIONS = 8;
+
+    useEffect(() => {
+        if (!inputValue || inputValue.length < 2) {
+            setSuggestions([]);
+            return;
+        }
+        const timer = setTimeout(() => searchPlaces(inputValue), 300);
+        return () => clearTimeout(timer);
+    }, [inputValue]);
+
+    const searchPlaces = async (query) => {
+        setLoading(true);
+        try {
+            const response = await fetch(
+                `${API}/api/trips/places/search?query=${encodeURIComponent(query)}`
+            );
+            if (response.ok) setSuggestions(await response.json());
+        } catch (e) {
+            console.error("Error searching places:", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSelect = (place) => {
+        const name = place.description || place.name || "";
+        if (name && !destinations.includes(name) && destinations.length < MAX_DESTINATIONS) {
+            onAdd(name);
+        }
+        setInputValue("");
+        setSuggestions([]);
+        setShowSuggestions(false);
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter" && inputValue.trim()) {
+            const val = inputValue.trim();
+            if (!destinations.includes(val) && destinations.length < MAX_DESTINATIONS) {
+                onAdd(val);
+            }
+            setInputValue("");
+            setSuggestions([]);
+            setShowSuggestions(false);
+        }
+    };
+
+    return (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
+            <div className="bg-indigo-600 w-16 h-16 rounded-[1.5rem] flex items-center justify-center text-white mb-8 shadow-lg shadow-indigo-500/20">
+                <MapPin size={32} />
+            </div>
+            <h1 className="text-4xl font-black text-white mb-2">Target Locations</h1>
+            <p className="text-slate-400 mb-8 font-medium">
+                Add one or more places — the AI will plan a seamless multi-city journey.
+            </p>
+
+            {/* Added destination tags */}
+            {destinations.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                    {destinations.map((dest, idx) => (
+                        <span
+                            key={idx}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 rounded-xl font-semibold text-sm"
+                        >
+                            <MapPin size={13} />
+                            {dest}
+                            <button
+                                type="button"
+                                onClick={() => onRemove(idx)}
+                                className="ml-1 text-indigo-400 hover:text-white transition-colors"
+                            >
+                                <X size={13} />
+                            </button>
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {/* Search input */}
+            {destinations.length < MAX_DESTINATIONS && (
+                <div className="relative mb-4">
+                    <input
+                        type="text"
+                        placeholder={destinations.length === 0 ? "e.g. Paris, Zurich, Tokyo" : "Add another destination…"}
+                        className="w-full p-6 bg-white/5 border border-white/10 rounded-2xl text-xl outline-none focus:border-indigo-500 text-white placeholder:text-slate-600 transition-all"
+                        value={inputValue}
+                        onFocus={() => setShowSuggestions(true)}
+                        onChange={(e) => { setInputValue(e.target.value); setShowSuggestions(true); }}
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                        onKeyDown={handleKeyDown}
+                    />
+
+                    {loading && showSuggestions && (
+                        <div className="absolute right-6 top-6">
+                            <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                    )}
+
+                    {showSuggestions && suggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-[#161b2c] border border-white/10 rounded-2xl shadow-2xl z-20 max-h-72 overflow-y-auto">
+                            {suggestions.map((place, index) => (
+                                <button
+                                    key={index}
+                                    type="button"
+                                    onMouseDown={(e) => { e.preventDefault(); handleSelect(place); }}
+                                    className="w-full text-left px-6 py-4 hover:bg-white/5 transition-colors border-b border-white/5 flex items-center gap-3"
+                                >
+                                    <MapPin size={14} className="text-indigo-400 shrink-0" />
+                                    <span className="font-bold text-white">{place.description || place.name}</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {destinations.length >= MAX_DESTINATIONS && (
+                <p className="text-xs text-amber-400 font-semibold mb-4">Maximum of {MAX_DESTINATIONS} destinations reached.</p>
+            )}
+
+            <p className="text-xs text-slate-500 mb-10">
+                Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-slate-400 font-mono text-xs">Enter</kbd> or select a suggestion to add a place.
+            </p>
+
+            <div className="flex gap-4">
+                <button
+                    onClick={onBack}
+                    className="flex-1 py-5 rounded-2xl font-bold text-slate-400 hover:text-white transition-all"
+                >
+                    Back
+                </button>
+                <button
+                    disabled={destinations.length === 0}
+                    onClick={onNext}
+                    className="flex-[2] bg-indigo-600 text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Continue <ChevronRight size={20} />
+                </button>
+            </div>
+        </div>
+    );
+};
+
 const CreateTrip = () => {
     const navigate = useNavigate();
     const { state } = useLocation();
@@ -178,7 +329,8 @@ const CreateTrip = () => {
 
     const [tripConfig, setTripConfig] = useState({
         origin: "",
-        destination: "",
+        destination: "",      // joined string sent to backend
+        destinations: [],     // array of individual places (UI state)
         startDate: "",
         endDate: "",
         flexibility: "Exact dates", // Mapped from dateFlexibility
@@ -196,11 +348,20 @@ const CreateTrip = () => {
 
     useEffect(() => {
         if (state?.prefilledDestination) {
-            setTripConfig(prev => ({ ...prev, destination: state.prefilledDestination }));
+            setTripConfig(prev => ({
+                ...prev,
+                destination: state.prefilledDestination,
+                destinations: [state.prefilledDestination]
+            }));
         }
 
         if (state?.editingTrip && state?.prefilledConfig) {
-            setTripConfig(prev => ({ ...prev, ...state.prefilledConfig }));
+            const cfg = state.prefilledConfig;
+            setTripConfig(prev => ({
+                ...prev,
+                ...cfg,
+                destinations: cfg.destination ? cfg.destination.split(' → ').map(s => s.trim()).filter(Boolean) : []
+            }));
             setStep(6);
         }
     }, [state]);
@@ -315,11 +476,16 @@ const CreateTrip = () => {
             ? tripConfig.otherInterests
             : (tripConfig.otherInterests ? tripConfig.otherInterests.split(',').map(s => s.trim()) : []);
 
+        // Join multiple destinations into a single string for the backend/AI
+        const destinationString = tripConfig.destinations.length > 0
+            ? tripConfig.destinations.join(' → ')
+            : tripConfig.destination;
+
         const payload = {
             tripId: state?.editingTrip ? state.tripId : null,
             userId,
             origin: tripConfig.origin,
-            destination: tripConfig.destination,
+            destination: destinationString,
             startDate: tripConfig.startDate,
             endDate: tripConfig.endDate,
             flexibility: tripConfig.flexibility,
@@ -397,18 +563,22 @@ const CreateTrip = () => {
                 )}
 
                 {step === 2 && (
-                    <LocationAutocomplete
-                        icon={MapPin}
-                        title="Target Location"
-                        subtitle="Where should the AI build your itinerary?"
-                        placeholder="e.g. Paris, Zurich, Tokyo"
-                        value={tripConfig.destination}
-                        onChange={(val) =>
-                            setTripConfig({ ...tripConfig, destination: val })
+                    <MultiDestinationInput
+                        destinations={tripConfig.destinations}
+                        onAdd={(place) =>
+                            setTripConfig(prev => ({
+                                ...prev,
+                                destinations: [...prev.destinations, place]
+                            }))
+                        }
+                        onRemove={(idx) =>
+                            setTripConfig(prev => ({
+                                ...prev,
+                                destinations: prev.destinations.filter((_, i) => i !== idx)
+                            }))
                         }
                         onNext={() => setStep(3)}
                         onBack={() => setStep(1)}
-                        themeColor="indigo"
                     />
                 )}
 
