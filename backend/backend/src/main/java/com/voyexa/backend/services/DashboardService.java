@@ -4,13 +4,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.voyexa.backend.DTOS.DestinationDto;
+import com.voyexa.backend.entities.TrendingDestinationMonth;
+import com.voyexa.backend.repositories.TrendingDestinationMonthRepository;
 import com.voyexa.backend.services.gemini.GeminiClient;
 import com.voyexa.backend.services.gemini.GeminiTask;
-import lombok.Getter;
-import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -23,99 +24,158 @@ public class DashboardService {
 
     private final GeminiClient geminiClient;
     private final ObjectMapper objectMapper;
+    private final TrendingDestinationMonthRepository trendingDestinationMonthRepository;
+    private final PexelsImageService pexelsImageService;
 
-    // Cache to avoid spamming the Gemini API
-    private List<DestinationDto> cachedDestinations = new ArrayList<>();
-    private String cachedMonth = "";
-    
-    // File path for persistent caching across server restarts
-    private static final String CACHE_FILE = "trending_destinations_cache.json";
-
-    // A small list of premium placeholders for aesthetic purposes until we add Unsplash API
-    private final List<String> placeholderImages = List.of(
-            "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&q=80&w=400",
-            "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&q=80&w=400",
-            "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=400",
-            "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?auto=format&fit=crop&q=80&w=400",
-            "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&q=80&w=400",
-            "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&q=80&w=400",
-            "https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&q=80&w=400",
-            "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&q=80&w=400",
-            "https://images.unsplash.com/photo-1530789253388-582c481c54b0?auto=format&fit=crop&q=80&w=400",
-            "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&q=80&w=400"
-    );
-
-    public DashboardService(GeminiClient geminiClient) {
+    public DashboardService(GeminiClient geminiClient, TrendingDestinationMonthRepository trendingDestinationMonthRepository, PexelsImageService pexelsImageService) {
         this.geminiClient = geminiClient;
+        this.trendingDestinationMonthRepository = trendingDestinationMonthRepository;
+        this.pexelsImageService = pexelsImageService;
         this.objectMapper = new ObjectMapper();
-        loadCacheFromFile();
     }
     
-    private void loadCacheFromFile() {
-        java.io.File file = new java.io.File(CACHE_FILE);
-        if (file.exists()) {
-            try {
-                // Read a small wrapper object containing month and list to ensure perfect mapping
-                CachedData data = objectMapper.readValue(file, CachedData.class);
-                if (data != null && data.getMonth() != null && data.getDestinations() != null) {
-                    this.cachedMonth = data.getMonth();
-                    this.cachedDestinations = data.getDestinations();
-                    log.info("Loaded trending destinations from persistent file cache for month: {}", cachedMonth);
-                }
-            } catch (Exception e) {
-                log.warn("Failed to load persistent cache, will fetch fresh from API. Error: {}", e.getMessage());
+    /**
+     * Get trending destinations for the current month
+     */
+    public List<DestinationDto> getTrendingDestinationsMonth() {
+        String currentMonth = LocalDate.now().getMonth().name(); // E.g., "MAY"
+        return getTrendingDestinationsByMonth(currentMonth);
+    }
+
+    /**
+     * Get trending destinations for a specific month
+     */
+    public List<DestinationDto> getTrendingDestinationsByMonth(String month) {
+        log.info("Fetching trending destinations for month: {}", month);
+
+        // Check if we have this month in database
+        if (trendingDestinationMonthRepository.existsByMonth(month)) {
+            List<TrendingDestinationMonth> entities = trendingDestinationMonthRepository.findByMonthOrderByRank(month);
+            if (!entities.isEmpty()) {
+                log.info("Found {} destinations for {} in database", entities.size(), month);
+                return convertEntitiesToDtos(entities);
             }
         }
-    }
 
-    private void saveCacheToFile() {
-        try {
-            CachedData data = new CachedData(cachedMonth, cachedDestinations);
-            objectMapper.writeValue(new java.io.File(CACHE_FILE), data);
-        } catch (Exception e) {
-            log.warn("Failed to save persistent cache to file: {}", e.getMessage());
-        }
-    }
-    
-    public List<DestinationDto> getTrendingDestinationsMonth() {
-        String currentMonth = LocalDate.now().getMonth().name(); // E.g., "APRIL"
-
-        if (currentMonth.equals(cachedMonth) && !cachedDestinations.isEmpty()) {
-            return cachedDestinations;
-        }
-
-        log.info("Cache miss for month {}. Fetching from Gemini API...", currentMonth);
-        String prompt = buildPrompt(currentMonth);
+        // Cache miss - generate from Gemini API
+        log.info("Cache miss for month {}. Fetching from Gemini API...", month);
+        String prompt = buildPrompt(month);
         String jsonResponse = callAiModel(prompt);
 
         if (jsonResponse != null) {
             try {
                 List<DestinationDto> destinations = objectMapper.readValue(jsonResponse, new TypeReference<List<DestinationDto>>() {});
                 
-                // Add placeholder images to the destinations
-                for (int i = 0; i < destinations.size(); i++) {
-                    DestinationDto dto = destinations.get(i);
-                    if (dto.getImageUrl() == null || dto.getImageUrl().isEmpty() || dto.getImageUrl().equals("null")) {
-                        dto.setImageUrl(placeholderImages.get(i % placeholderImages.size()));
-                    }
+                // Fetch proper Pexels images based on destination
+                for (DestinationDto dto : destinations) {
+                    dto.setImageUrl(generatePexelsImageUrl(dto));
                 }
 
-                cachedDestinations = destinations;
-                cachedMonth = currentMonth;
-                saveCacheToFile();
-                return cachedDestinations;
+                // Save to database
+                saveDestinationsToDatabase(month, destinations);
+                return destinations;
 
             } catch (JsonProcessingException e) {
                 log.error("Failed to parse Gemini response for trending destinations: {}", e.getMessage());
             }
         }
 
-        // Fallback: return old cache if present, even if it's for a different month
-        if (!cachedDestinations.isEmpty()) {
-            return cachedDestinations;
-        }
-
+        log.warn("No trending destinations available for month: {}", month);
         return List.of();
+    }
+
+    /**
+     * Fetch image from Pexels API based on destination
+     */
+    private String generatePexelsImageUrl(DestinationDto dto) {
+        try {
+            // Use Gemini's search term if provided, otherwise use city name
+            String searchTerm = (dto.getImageSearchTerm() != null && !dto.getImageSearchTerm().isEmpty())
+                ? dto.getImageSearchTerm()
+                : dto.getCity();
+
+            String imageUrl = pexelsImageService.fetchImageForActivity(searchTerm, dto.getCountry());
+            log.info("Fetched image from Pexels for: {} -> {}", searchTerm, imageUrl);
+            return imageUrl;
+        } catch (Exception e) {
+            log.warn("Error fetching image from Pexels for {}: {}", dto.getCity(), e.getMessage());
+            // Return a fallback image from a free source
+            return "https://images.pexels.com/photos/3408831/pexels-photo-3408831.jpeg";
+        }
+    }
+
+    /**
+     * Get all available months with trending data
+     */
+    public List<String> getAllAvailableMonths() {
+        return trendingDestinationMonthRepository.findAllMonths();
+    }
+
+    /**
+     * Generate trending destinations for all 12 months (typically called once on startup)
+     */
+    public void generateAllMonthsIfMissing() {
+        String[] months = {"JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
+                          "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"};
+
+        for (String month : months) {
+            if (!trendingDestinationMonthRepository.existsByMonth(month)) {
+                log.info("Generating trending destinations for {}", month);
+                getTrendingDestinationsByMonth(month);
+                try {
+                    // Small delay to avoid hammering the API
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+    }
+
+    /**
+     * Save destinations to database
+     */
+    @Transactional
+    private void saveDestinationsToDatabase(String month, List<DestinationDto> destinations) {
+        try {
+            // Delete existing records for this month
+            trendingDestinationMonthRepository.deleteByMonth(month);
+
+            // Save new records
+            for (int i = 0; i < destinations.size(); i++) {
+                DestinationDto dto = destinations.get(i);
+                TrendingDestinationMonth entity = new TrendingDestinationMonth(
+                    month,
+                    dto.getCity(),
+                    dto.getCountry(),
+                    dto.getDescription(),
+                    dto.getBudget(),
+                    dto.getImageUrl(),
+                    i + 1  // rank from 1-10
+                );
+                trendingDestinationMonthRepository.save(entity);
+            }
+            log.info("Saved {} destinations for {} to database", destinations.size(), month);
+        } catch (Exception e) {
+            log.error("Failed to save destinations to database: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Convert database entities to DTOs
+     */
+    private List<DestinationDto> convertEntitiesToDtos(List<TrendingDestinationMonth> entities) {
+        List<DestinationDto> dtos = new ArrayList<>();
+        for (TrendingDestinationMonth entity : entities) {
+            DestinationDto dto = new DestinationDto();
+            dto.setCity(entity.getCity());
+            dto.setCountry(entity.getCountry());
+            dto.setDescription(entity.getDescription());
+            dto.setBudget(entity.getBudget());
+            dto.setImageUrl(entity.getImageUrl());
+            dtos.add(dto);
+        }
+        return dtos;
     }
 
     private String buildPrompt(String month) {
@@ -136,7 +196,8 @@ public class DashboardService {
                     "city": "string (the city name)",
                     "country": "string (the country name)",
                     "description": "string (a catchy 1-sentence reason why it's trending this month)",
-                    "budget": numeric (integer, reasonable estimated cost for a 5-day solo trip in USD)
+                    "budget": numeric (integer, reasonable estimated cost for a 5-day solo trip in USD),
+                    "imageSearchTerm": "string (2-3 word search term for beautiful stock photos, e.g., 'tokyo cherry blossoms', 'paris spring', 'dubai desert sunset')"
                   }
                 ]
                 """.formatted(month);
@@ -150,19 +211,4 @@ public class DashboardService {
             log.error("Error calling Gemini API for trending destinations: {}", e.getMessage());
             return null;
         }
-    }
-
-    @Getter
-    @Setter
-    public static class CachedData {
-        private String month;
-        private List<DestinationDto> destinations;
-        
-        public CachedData() {}
-        
-        public CachedData(String month, List<DestinationDto> destinations) {
-            this.month = month;
-            this.destinations = destinations;
-        }
-    }
-}
+    }}

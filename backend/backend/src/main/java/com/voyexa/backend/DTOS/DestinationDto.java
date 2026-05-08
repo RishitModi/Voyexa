@@ -13,4 +13,5 @@ public class DestinationDto {
     private String description;
     private Integer budget;
     private String imageUrl;
+    private String imageSearchTerm;  // Image search term from Gemini for generating Unsplash URLs
 }
