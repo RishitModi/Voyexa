@@ -136,7 +136,7 @@ public class DashboardService {
      * Save destinations to database
      */
     @Transactional
-    private void saveDestinationsToDatabase(String month, List<DestinationDto> destinations) {
+    protected void saveDestinationsToDatabase(String month, List<DestinationDto> destinations) {
         try {
             // Delete existing records for this month
             trendingDestinationMonthRepository.deleteByMonth(month);
