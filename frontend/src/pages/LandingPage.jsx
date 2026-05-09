@@ -17,7 +17,7 @@ const LandingPage = () => {
 
   useEffect(() => {
     const previousTitle = document.title;
-    const title = 'Voyexa — AI-powered travel itineraries';
+    const title = 'Voyexa';
     document.title = title;
 
     const metaDefs = [
