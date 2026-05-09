@@ -19,6 +19,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import UserProfileModal from "../components/UserProfileModal";
 import TravelerProfilesModal from "../components/TravelerProfilesModal";
+import TrendingDestinationsByMonth from "../components/landing/TrendingDestinationsByMonth";
 
 gsap.registerPlugin(ScrollTrigger);
 const API = import.meta.env.VITE_API_URL;
@@ -35,6 +36,7 @@ const Dashboard = () => {
   const [userData, setUserData] = useState({ name: "", email: "", phone: "" });
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isTravelerProfilesModalOpen, setIsTravelerProfilesModalOpen] = useState(false);
+  const [isMonthExplorerOpen, setIsMonthExplorerOpen] = useState(false);
   const [userId, setUserId] = useState(null);
 
   // Refs for parallax animations
@@ -376,7 +378,7 @@ const Dashboard = () => {
           </nav>
 
           <div className="p-6 space-y-3 border-t border-slate-800/50">
-            <button 
+            <button
                 onClick={() => setIsProfileModalOpen(true)}
                 className="w-full flex items-center gap-3 px-4 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl font-semibold text-slate-300 transition-all group"
             >
@@ -414,7 +416,7 @@ const Dashboard = () => {
         >
           {/* HERO SECTION - FULL SCREEN */}
           <div ref={heroRef} className="relative w-full h-screen bg-transparent text-white overflow-hidden will-change-transform flex items-center justify-center px-6 lg:px-12">
-            <div 
+            <div
               ref={heroBgRef}
               className="absolute -top-20 -right-20 w-[40rem] h-[40rem] bg-indigo-600 rounded-full blur-[120px] opacity-50 animate-pulse will-change-transform"
             ></div>
@@ -485,13 +487,20 @@ const Dashboard = () => {
 
           {/* TRENDING SECTION */}
           <div ref={trendingContainerRef} className="will-change-transform py-12">
-            {/* TRIP GRID TITLE */}
-            <div ref={trendingTitleRef} className="flex justify-between items-end mb-8 max-w-7xl mx-auto px-6 lg:px-12 will-change-transform">
-              <div>
-                <h2 className="text-3xl font-black text-white tracking-tight">Trending in {currentMonth}</h2>
-                <p className="text-slate-400 font-medium mt-2">Top 10 hottest destinations picked by AI</p>
-              </div>
-            </div>
+           {/* TRIP GRID TITLE */}
+             <div ref={trendingTitleRef} className="flex justify-between items-end mb-8 max-w-7xl mx-auto px-6 lg:px-12 will-change-transform">
+               <div>
+                 <h2 className="text-3xl font-black text-white tracking-tight">Trending in {currentMonth}</h2>
+                 <p className="text-slate-400 font-medium mt-2">Top 10 hottest destinations picked by AI</p>
+               </div>
+               <button
+                 onClick={() => setIsMonthExplorerOpen(true)}
+                 className="text-indigo-400 hover:text-indigo-300 font-semibold text-sm flex items-center gap-2 transition-colors"
+               >
+                 <span>Explore other months</span>
+                 <ChevronRight size={16} />
+               </button>
+             </div>
 
             {/* CARDS GRID */}
             <div ref={trendingGridRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 pb-12 max-w-7xl mx-auto px-6 lg:px-12">
@@ -558,6 +567,10 @@ const Dashboard = () => {
           isOpen={isTravelerProfilesModalOpen}
           onClose={() => setIsTravelerProfilesModalOpen(false)}
           userId={userId}
+        />
+        <TrendingDestinationsByMonth
+          isOpen={isMonthExplorerOpen}
+          onClose={() => setIsMonthExplorerOpen(false)}
         />
       </div>
   );
