@@ -6,11 +6,12 @@ export default async function handler(req, res) {
     if (!supabaseUrl || !supabaseAnonKey) {
       return res.status(500).json({ message: "Missing Supabase environment variables" });
     }
-    const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+    const response = await fetch(`${supabaseUrl}/rest/v1/users?select=id&limit=1`, {
       method: "GET",
       headers: {
         apikey: supabaseAnonKey,
         Authorization: `Bearer ${supabaseAnonKey}`,
+        Accept: "application/json",
       },
     });
     if (!response.ok) {
