@@ -6,16 +6,26 @@ export default async function handler(req, res) {
     if (!supabaseUrl || !supabaseAnonKey) {
       return res.status(500).json({ message: "Missing Supabase environment variables" });
     }
-    const response = await fetch(`${supabaseUrl}/rest/v1/users?select=id&limit=1`, {
-      method: "GET",
-      headers: {
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${supabaseAnonKey}`,
-        Accept: "application/json",
-      },
-    });
+    const tableName = process.env.SUPABASE_KEEPALIVE_TABLE || "keepalive";
+    const encodedTable = encodeURIComponent(tableName);
+
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/${encodedTable}?select=*&limit=1`,
+      {
+        method: "GET",
+        headers: {
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${supabaseAnonKey}`,
+          Accept: "application/json",
+        },
+      }
+    );
+
     if (!response.ok) {
-      return res.status(500).json({ message: `Supabase ping failed: ${response.status}` });
+      const errorBody = await response.text();
+      return res
+        .status(500)
+        .json({ message: `Supabase ping failed: ${response.status}`, error: errorBody });
     }
     return res.status(200).json({ message: "Supabase pinged" });
   } catch (error) {
