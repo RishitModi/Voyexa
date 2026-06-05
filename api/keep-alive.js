@@ -10,6 +10,7 @@ export default async function handler(req, res) {
       method: "GET",
       headers: {
         apikey: supabaseAnonKey,
+        Authorization: `Bearer ${supabaseAnonKey}`,
       },
     });
     if (!response.ok) {
