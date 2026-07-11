@@ -20,6 +20,8 @@ import Lenis from "lenis";
 import UserProfileModal from "../components/UserProfileModal";
 import TravelerProfilesModal from "../components/TravelerProfilesModal";
 import TrendingDestinationsByMonth from "../components/landing/TrendingDestinationsByMonth";
+import { authFetch } from "../utils/apiClient";
+import { logout } from "../utils/auth";
 
 gsap.registerPlugin(ScrollTrigger);
 const API = import.meta.env.VITE_API_URL;
@@ -86,7 +88,7 @@ const Dashboard = () => {
 
     const fetchMyTrips = async () => {
       try {
-        const response = await fetch(`${API}/api/trips/user/${userId}`);
+        const response = await authFetch(`${API}/api/trips/user/${userId}`);
         if (response.ok) {
           const data = await response.json();
           setMyTrips(Array.isArray(data) ? data : []);
@@ -389,8 +391,7 @@ const Dashboard = () => {
             </button>
             <button
                 onClick={() => {
-                  localStorage.clear();
-                  navigate("/");
+                  logout(navigate);
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-2xl font-bold group transition-all"
             >

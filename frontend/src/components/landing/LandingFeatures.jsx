@@ -11,7 +11,6 @@ import {
   User,
   Heart,
   Users,
-  Briefcase,
 } from 'lucide-react';
 import useScrollReveal from '@/hooks/useScrollReveal';
 import { useTheme } from '@/context/ThemeContext';
@@ -115,16 +114,16 @@ const useCases = [
     description: 'Romantic getaways and shared experiences designed for two.'
   },
   {
-    title: 'Group',
-    tag: 'Coordinated',
+    title: 'Family',
+    tag: 'Family-friendly',
     icon: Users,
-    description: 'Coordinated itineraries that accommodate diverse preferences and group dynamics.'
+    description: 'Relaxed, kid-safe itineraries with easy logistics and activities the whole family can enjoy.'
   },
   {
-    title: 'Work trip',
-    tag: 'Efficient',
-    icon: Briefcase,
-    description: 'Efficient business travel plans that balance meetings with local exploration.'
+    title: 'Friends',
+    tag: 'Adventure',
+    icon: Users,
+    description: 'Fun, social, and energetic experiences — group activities, lively areas, and shared adventures.'
   }
 ];
 

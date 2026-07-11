@@ -23,16 +23,19 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
 
     public UserService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
-                       AuthenticationManager authenticationManager) {
+                       AuthenticationManager authenticationManager,
+                       JwtService jwtService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
     }
 
-    public String registerUser(UserRegistrationDto dto) {
+    public UserLoginResponseDto registerUser(UserRegistrationDto dto) {
         Map<String, String> duplicateErrors = new LinkedHashMap<>();
 
         if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
@@ -55,8 +58,21 @@ public class UserService {
         user.setCreated_at(LocalDateTime.now());
         user.setUpdated_at(LocalDateTime.now());
 
-        userRepository.save(user);
-        return "User registered successfully.";
+        user = userRepository.save(user);
+
+        // Auto-login: generate tokens immediately after registration
+        String accessToken = jwtService.generateAccessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+        return new UserLoginResponseDto(
+                user.getUser_id(),
+                user.getName(),
+                user.getEmail(),
+                user.getPhone_number(),
+                "Registration successful.",
+                accessToken,
+                refreshToken
+        );
     }
 
     public UserLoginResponseDto loginUser(UserLoginDto dto) {
@@ -66,7 +82,47 @@ public class UserService {
 
         Optional<User> userOpt = userRepository.findByEmail(dto.getEmail());
         User user = userOpt.orElseThrow(() -> new IllegalArgumentException("User not found."));
-        return new UserLoginResponseDto(user.getUser_id(), user.getName(), user.getEmail(), user.getPhone_number(), "Login successful.");
+
+        String accessToken = jwtService.generateAccessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+        return new UserLoginResponseDto(
+                user.getUser_id(),
+                user.getName(),
+                user.getEmail(),
+                user.getPhone_number(),
+                "Login successful.",
+                accessToken,
+                refreshToken
+        );
+    }
+
+    public UserLoginResponseDto refreshTokens(String refreshToken) {
+        if (!jwtService.isTokenValid(refreshToken)) {
+            throw new IllegalArgumentException("Invalid or expired refresh token.");
+        }
+
+        String tokenType = jwtService.extractTokenType(refreshToken);
+        if (!"refresh".equals(tokenType)) {
+            throw new IllegalArgumentException("Token is not a refresh token.");
+        }
+
+        String email = jwtService.extractEmail(refreshToken);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+
+        String newAccessToken = jwtService.generateAccessToken(user);
+        String newRefreshToken = jwtService.generateRefreshToken(user);
+
+        return new UserLoginResponseDto(
+                user.getUser_id(),
+                user.getName(),
+                user.getEmail(),
+                user.getPhone_number(),
+                "Tokens refreshed.",
+                newAccessToken,
+                newRefreshToken
+        );
     }
 
     public List<User> getAllUsers() {

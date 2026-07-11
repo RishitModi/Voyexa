@@ -39,9 +39,11 @@ public class TripService {
         validateDates(dto);
         String normalizedGroup = normalizeGroup(dto.getTravelers());
 
-        Optional<User> userOpt = userRepository.findById(dto.getUserId());
-        if (userOpt.isEmpty()) {
-            throw new IllegalArgumentException("User not found.");
+        // Guest users may have null userId
+        User user = null;
+        if (dto.getUserId() != null) {
+            user = userRepository.findById(dto.getUserId())
+                    .orElseThrow(() -> new IllegalArgumentException("User not found."));
         }
 
         int adultCount = dto.getAdultCount() == null ? 0 : dto.getAdultCount();
@@ -69,7 +71,7 @@ public class TripService {
         } else {
             trip = new Trip();
         }
-        trip.setUser(userOpt.get());
+        trip.setUser(user);
         trip.setOrigin(dto.getOrigin().trim());
         trip.setDestination(dto.getDestination().trim());
         trip.setStartDate(dto.getStartDate());

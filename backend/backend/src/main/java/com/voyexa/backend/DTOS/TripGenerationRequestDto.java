@@ -20,7 +20,6 @@ public class TripGenerationRequestDto {
 
     private UUID tripId;
 
-    @NotNull
     private Integer userId;
 
     @NotBlank

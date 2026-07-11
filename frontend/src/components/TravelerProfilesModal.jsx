@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Users, X } from "lucide-react";
+import { authFetch } from "../utils/apiClient";
 
 const RELATIONS = ["self", "spouse", "child", "parent", "friend", "other"];
 const GENDERS = ["male", "female", "other"];
@@ -34,7 +35,7 @@ export default function TravelerProfilesModal({ isOpen, onClose, userId, onProfi
   const fetchProfiles = async () => {
     setError("");
     try {
-      const res = await fetch(`${API}/api/traveler-profiles/user/${userId}`);
+      const res = await authFetch(`${API}/api/traveler-profiles/user/${userId}`);
       if (!res.ok) throw new Error("Unable to load traveler profiles.");
       const data = await res.json();
       setProfiles(Array.isArray(data) ? data : []);
@@ -67,7 +68,7 @@ export default function TravelerProfilesModal({ isOpen, onClose, userId, onProfi
     };
 
     try {
-      const res = await fetch(`${API}/api/traveler-profiles`, {
+      const res = await authFetch(`${API}/api/traveler-profiles`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -88,7 +89,7 @@ export default function TravelerProfilesModal({ isOpen, onClose, userId, onProfi
   const handleDelete = async (profileId) => {
     if (!userId) return;
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `${API}/api/traveler-profiles/${profileId}?userId=${userId}`,
         { method: "DELETE" },
       );
