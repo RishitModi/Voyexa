@@ -1,4 +1,4 @@
-const API = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+export const API = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 // ── In-memory access token (never stored in localStorage) ──
 let accessToken = null;

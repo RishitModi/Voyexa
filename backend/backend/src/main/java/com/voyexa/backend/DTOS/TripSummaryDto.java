@@ -1,4 +1,4 @@
-package com.voyexa.backend.DTOS;
+﻿package com.voyexa.backend.DTOS;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -23,7 +23,6 @@ public class TripSummaryDto {
     private Integer adultCount;
     private Integer childCount;
     private String travelGroupType;
-    private String dateFlexibility;
     private String[] interests;
     private String otherInterest;
     private String accommodationPreference;

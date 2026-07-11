@@ -76,7 +76,6 @@ public class TripService {
         trip.setDestination(dto.getDestination().trim());
         trip.setStartDate(dto.getStartDate());
         trip.setEndDate(dto.getEndDate());
-        trip.setDateFlexibility(dto.getDateFlexibility());
         trip.setTravelGroupType(normalizedGroup);
         trip.setAdultCount(adultCount);
         trip.setChildCount(childCount);
@@ -105,7 +104,6 @@ public class TripService {
         tripRequestDto.setDestination(dto.getDestination());
         tripRequestDto.setStartDate(dto.getStartDate());
         tripRequestDto.setEndDate(dto.getEndDate());
-        tripRequestDto.setDateFlexibility(dto.getFlexibility());
         tripRequestDto.setTravelers(dto.getTravelers());
 
         if (dto.getAdultCount() != null || dto.getChildCount() != null) {
@@ -155,7 +153,6 @@ public class TripService {
                 trip.getAdultCount(),
                 trip.getChildCount(),
                 trip.getTravelGroupType(),
-                trip.getDateFlexibility(),
                 trip.getInterests(),
                 trip.getOtherInterest(),
                 trip.getAccommodationPreference(),
@@ -207,7 +204,6 @@ public class TripService {
         forkedTrip.setDestination(originalTrip.getDestination());
         forkedTrip.setStartDate(originalTrip.getStartDate());
         forkedTrip.setEndDate(originalTrip.getEndDate());
-        forkedTrip.setDateFlexibility(originalTrip.getDateFlexibility());
         forkedTrip.setTravelGroupType(originalTrip.getTravelGroupType());
         forkedTrip.setAdultCount(originalTrip.getAdultCount());
         forkedTrip.setChildCount(originalTrip.getChildCount());
