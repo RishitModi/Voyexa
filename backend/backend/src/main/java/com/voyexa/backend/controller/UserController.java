@@ -1,5 +1,6 @@
 package com.voyexa.backend.controller;
 
+import com.voyexa.backend.DTOS.RefreshTokenRequestDto;
 import com.voyexa.backend.DTOS.UserLoginResponseDto;
 import com.voyexa.backend.DTOS.UserRegistrationDto;
 import com.voyexa.backend.DTOS.UserLoginDto;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -22,15 +24,25 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@Valid @RequestBody UserRegistrationDto dto) {
-        String message = userService.registerUser(dto);
-        return ResponseEntity.ok(message);
+    public ResponseEntity<UserLoginResponseDto> register(@Valid @RequestBody UserRegistrationDto dto) {
+        UserLoginResponseDto response = userService.registerUser(dto);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login")
     public ResponseEntity<UserLoginResponseDto> login(@RequestBody UserLoginDto dto) {
         UserLoginResponseDto response = userService.loginUser(dto);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(@Valid @RequestBody RefreshTokenRequestDto dto) {
+        try {
+            UserLoginResponseDto response = userService.refreshTokens(dto.getRefreshToken());
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(401).body(Map.of("message", e.getMessage()));
+        }
     }
 
     @GetMapping

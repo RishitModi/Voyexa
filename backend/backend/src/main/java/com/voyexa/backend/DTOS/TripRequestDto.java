@@ -16,7 +16,6 @@ public class TripRequestDto {
 
     private UUID tripId;
 
-    @NotNull
     private Integer userId;
 
     @NotBlank

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 const API = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+import { authFetch } from "../utils/apiClient";
 
 const LocationAutocomplete = ({
     icon: Icon,
@@ -321,50 +322,74 @@ const CreateTrip = () => {
     const navigate = useNavigate();
     const { state } = useLocation();
 
-    const [step, setStep] = useState(1);
+    // ── Restore form state from sessionStorage on refresh ──
+    const savedFormState = (() => {
+        try {
+            const cached = sessionStorage.getItem('voyexa_create_trip');
+            return cached ? JSON.parse(cached) : null;
+        } catch { return null; }
+    })();
+
+    const [step, setStep] = useState(() => {
+        if (state?.editingTrip) return 6; // editing jumps to review
+        return savedFormState?.step || 1;
+    });
     const [apiError, setApiError] = useState("");
     const [travelerProfiles, setTravelerProfiles] = useState([]);
-    const [selectedProfileIds, setSelectedProfileIds] = useState([]);
+    const [selectedProfileIds, setSelectedProfileIds] = useState(savedFormState?.selectedProfileIds || []);
     const [profilesLoading, setProfilesLoading] = useState(false);
 
-    const [tripConfig, setTripConfig] = useState({
+    const defaultConfig = {
         origin: "",
         destination: "",      // joined string sent to backend
         destinations: [],     // array of individual places (UI state)
         startDate: "",
         endDate: "",
-        flexibility: "Exact dates", // Mapped from dateFlexibility
+        flexibility: "Exact dates",
         travelers: "Solo",
-        travelerCount: 1, // Mapped from adultCount/childCount
+        travelerCount: 1,
         budget: "Moderate",
-        accommodationType: "Any", // Mapped from accommodationPreference
+        accommodationType: "Any",
         travelPace: "Balanced",
         interests: [],
-        otherInterests: [], // Mapped from otherInterest
-        // --- Internal component state below, not sent to API ---
+        otherInterests: [],
         adultCount: 1,
         childCount: 0,
-    });
+    };
 
-    useEffect(() => {
-        if (state?.prefilledDestination) {
-            setTripConfig(prev => ({
-                ...prev,
-                destination: state.prefilledDestination,
-                destinations: [state.prefilledDestination]
-            }));
-        }
-
+    const [tripConfig, setTripConfig] = useState(() => {
+        // Priority: location.state (fresh nav) > sessionStorage (refresh) > defaults
         if (state?.editingTrip && state?.prefilledConfig) {
             const cfg = state.prefilledConfig;
-            setTripConfig(prev => ({
-                ...prev,
+            return {
+                ...defaultConfig,
                 ...cfg,
-                destinations: cfg.destination ? cfg.destination.split(' → ').map(s => s.trim()).filter(Boolean) : []
-            }));
-            setStep(6);
+                destinations: cfg.destination ? cfg.destination.split(' → ').map(s => s.trim()).filter(Boolean) : [],
+            };
         }
-    }, [state]);
+        if (state?.prefilledDestination) {
+            return {
+                ...defaultConfig,
+                destination: state.prefilledDestination,
+                destinations: [state.prefilledDestination],
+            };
+        }
+        if (savedFormState?.tripConfig) {
+            return { ...defaultConfig, ...savedFormState.tripConfig };
+        }
+        return defaultConfig;
+    });
+
+    // ── Persist form state on every change ──
+    useEffect(() => {
+        try {
+            sessionStorage.setItem('voyexa_create_trip', JSON.stringify({
+                step,
+                tripConfig,
+                selectedProfileIds,
+            }));
+        } catch { /* quota exceeded — non-critical */ }
+    }, [step, tripConfig, selectedProfileIds]);
 
     useEffect(() => {
         const rawUserId = localStorage.getItem("voyexa_user_id");
@@ -374,7 +399,7 @@ const CreateTrip = () => {
         const fetchProfiles = async () => {
             setProfilesLoading(true);
             try {
-                const response = await fetch(`${API}/api/traveler-profiles/user/${userId}`);
+                const response = await authFetch(`${API}/api/traveler-profiles/user/${userId}`);
                 if (!response.ok) {
                     throw new Error("Unable to load traveler profiles.");
                 }
@@ -465,12 +490,9 @@ const CreateTrip = () => {
     const handleBuildItinerary = () => {
         setApiError("");
 
+        // userId is optional — guests send null
         const rawUserId = localStorage.getItem("voyexa_user_id");
         const userId = rawUserId ? Number(rawUserId) : null;
-        if (!userId || Number.isNaN(userId)) {
-            setApiError("Please log in again before building an itinerary.");
-            return;
-        }
 
         const otherInterestsArray = Array.isArray(tripConfig.otherInterests)
             ? tripConfig.otherInterests
@@ -508,6 +530,9 @@ const CreateTrip = () => {
                 notes: "Web client request"
             }
         };
+
+        // Clear saved form state — trip is submitted
+        sessionStorage.removeItem('voyexa_create_trip');
 
         navigate("/flight-loading", {
             state: {

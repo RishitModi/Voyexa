@@ -6,6 +6,8 @@ import {
     Lightbulb, Share2, Download, Check, RefreshCw, X, CheckCircle, GripVertical, Copy, FileText
 } from 'lucide-react';
 import { fetchOnDemandAlternatives } from '../services/alternativesService';
+import { authFetch } from '../utils/apiClient';
+import { isUserLoggedIn } from '../utils/auth';
 import {
     DndContext,
     closestCenter,
@@ -27,7 +29,29 @@ const API = import.meta.env.VITE_API_URL;
 const ItineraryResult = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { tripId, itineraryJson } = location.state || {};
+
+    // ── Restore state from location.state OR sessionStorage on refresh ──
+    const resolvedState = (() => {
+        if (location.state?.tripId && location.state?.itineraryJson) {
+            // Fresh navigation — persist for refresh survival
+            try {
+                sessionStorage.setItem('voyexa_itinerary_state', JSON.stringify({
+                    tripId: location.state.tripId,
+                    itineraryJson: location.state.itineraryJson,
+                }));
+            } catch { /* quota exceeded — non-critical */ }
+            return location.state;
+        }
+        // Refresh / back button — try sessionStorage
+        try {
+            const cached = sessionStorage.getItem('voyexa_itinerary_state');
+            if (cached) return JSON.parse(cached);
+        } catch { /* corrupted — ignore */ }
+        return {};
+    })();
+
+    const { tripId, itineraryJson } = resolvedState;
+
     const [isSaving, setIsSaving] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
     const [isInjectingImages, setIsInjectingImages] = useState(false);
@@ -538,15 +562,28 @@ const ItineraryResult = () => {
             alert('Unable to save: trip ID is missing. Please generate the itinerary again.');
             return;
         }
+
+        // Require login for saving
+        if (!isUserLoggedIn()) {
+            navigate('/auth', {
+                state: {
+                    loginRequired: true,
+                    requestedPath: '/itinerary-result',
+                    requestedState: { tripId, itineraryJson: itineraryData },
+                },
+            });
+            return;
+        }
+
         setIsSaving(true);
         try {
             const pruned = stripImages(itineraryData);
-            const response = await fetch(`${API}/api/trips/${tripId}/itinerary`, {
+            const response = await authFetch(`${API}/api/trips/${tripId}/itinerary`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(pruned)
             });
-            if (response.ok) {
+            if (response && response.ok) {
                 setIsSaved(true);
                 alert('Trip saved! You can now view it in the My Trips page of your dashboard.');
             } else {
@@ -628,7 +665,7 @@ const ItineraryResult = () => {
         }
 
         try {
-            const response = await fetch(
+            const response = await authFetch(
                 `${API}/api/trips/${tripId}/apply-alternative?dayNumber=${dayNumber}&timeSlot=${timeSlot}&selectedIndex=${selectedIndex}`,
                 { method: 'PUT' }
             );
@@ -669,7 +706,7 @@ const ItineraryResult = () => {
 
                 // Save to backend
                 try {
-                    const response = await fetch(`${API}/api/trips/${tripId}/reorder`, {
+                    const response = await authFetch(`${API}/api/trips/${tripId}/reorder`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -699,7 +736,7 @@ const ItineraryResult = () => {
 
         setIsForkingSaving(true);
         try {
-            const response = await fetch(`${API}/api/trips/${tripId}/fork`, {
+            const response = await authFetch(`${API}/api/trips/${tripId}/fork`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -730,9 +767,8 @@ const ItineraryResult = () => {
     const handleCreateShareLink = async () => {
         setIsSharingLoading(true);
         try {
-            // Get userId from localStorage or pass it
-            const userId = localStorage.getItem('userId') || 1;
-            const response = await fetch(`${API}/api/trips/${tripId}/share?userId=${userId}`, {
+            const userId = localStorage.getItem('voyexa_user_id');
+            const response = await authFetch(`${API}/api/trips/${tripId}/share?userId=${userId}`, {
                 method: 'POST'
             });
 

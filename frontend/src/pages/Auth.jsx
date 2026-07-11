@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "@/context/ThemeContext";
+import { setTokens } from "@/utils/apiClient";
 import {
   Plane,
   Mail,
@@ -37,6 +38,25 @@ const Auth = () => {
     }
   }, [location.state]);
 
+  const storeUserAndNavigate = (data) => {
+    // Store tokens
+    setTokens(data.accessToken, data.refreshToken);
+
+    // Store user info for display
+    if (data?.userId !== undefined && data?.userId !== null) {
+      localStorage.setItem("voyexa_user_id", String(data.userId));
+    }
+    if (data?.name) localStorage.setItem("voyexa_user_name", data.name);
+    if (data?.email) localStorage.setItem("voyexa_user_email", data.email);
+    if (data?.phone_number) localStorage.setItem("voyexa_user_phone", data.phone_number);
+
+    setSuccess(data?.message || "Success!");
+
+    const requestedPath = location.state?.requestedPath;
+    const requestedState = location.state?.requestedState;
+    navigate(requestedPath || "/dashboard", requestedState ? { state: requestedState } : undefined);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -69,46 +89,16 @@ const Auth = () => {
         body: JSON.stringify(payload),
       });
 
-      if (isLogin) {
-        const contentType = response.headers.get("content-type") || "";
-        const data = contentType.includes("application/json")
-          ? await response.json()
-          : { message: await response.text() };
+      const contentType = response.headers.get("content-type") || "";
+      const data = contentType.includes("application/json")
+        ? await response.json()
+        : { message: await response.text() };
 
-        if (response.ok) {
-          if (data?.userId !== undefined && data?.userId !== null) {
-            localStorage.setItem("voyexa_user_id", String(data.userId));
-          }
-          if (data?.name) {
-            localStorage.setItem("voyexa_user_name", data.name);
-          }
-          if (data?.email) {
-            localStorage.setItem("voyexa_user_email", data.email);
-          }
-          if (data?.phone_number) {
-            localStorage.setItem("voyexa_user_phone", data.phone_number);
-          }
-          setSuccess(data?.message || "Login successful.");
-          const requestedPath = location.state?.requestedPath;
-          const requestedState = location.state?.requestedState;
-          navigate(requestedPath || "/dashboard", requestedState ? { state: requestedState } : undefined);
-        } else {
-          setError(data?.message || "Login failed.");
-        }
+      if (response.ok) {
+        // Both login and register now return tokens
+        storeUserAndNavigate(data);
       } else {
-        const text = await response.text();
-
-        if (response.ok) {
-          setSuccess(text);
-          setTimeout(() => {
-            setIsLogin(true);
-            setSuccess("");
-            setName("");
-            setPhoneNumber("");
-          }, 2000);
-        } else {
-          setError(text);
-        }
+        setError(data?.message || (isLogin ? "Login failed." : "Registration failed."));
       }
     } catch (err) {
       setError("Network error: Is the backend running?");

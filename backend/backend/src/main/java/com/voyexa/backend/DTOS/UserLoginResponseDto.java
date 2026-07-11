@@ -11,4 +11,6 @@ public class UserLoginResponseDto {
     private String email;
     private String phone_number;
     private String message;
+    private String accessToken;
+    private String refreshToken;
 }
