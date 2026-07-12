@@ -1,4 +1,4 @@
-package com.voyexa.backend.DTOS;
+﻿package com.voyexa.backend.DTOS;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -33,9 +33,6 @@ public class TripGenerationRequestDto {
 
     @NotNull
     private LocalDate endDate;
-
-    @NotBlank
-    private String flexibility;
 
     // Categorical traveler profile (Solo/Couple/Friends/Family, etc.)
     @NotBlank

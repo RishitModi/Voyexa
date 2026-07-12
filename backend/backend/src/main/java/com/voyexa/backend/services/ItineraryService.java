@@ -337,7 +337,6 @@ public class ItineraryService {
                 - Destination: %s
                 - Start Date: %s
                 - End Date: %s
-                - Date Flexibility: %s
                 - Travelers: %s
                 - Budget: %s
                 - Accommodation Type: %s
@@ -399,7 +398,6 @@ public class ItineraryService {
                 - Day 1 must include arrival/travel logistics from origin to destination and check-in.
                 - Final day must include departure logistics returning to origin.
                 - Other days should only include logistics if truly needed.
-                - If date flexibility is present, prefer the most natural schedule within the provided range.
                 - Make the trip vibe consistent with travel pace:
                   - Relaxed → 1 to 2 main activities with downtime
                   - Balanced → standard tourist day
@@ -509,7 +507,6 @@ public class ItineraryService {
                 dto.getDestination(),
                 dto.getStartDate(),
                 dto.getEndDate(),
-                dto.getFlexibility(),
                 dto.getTravelers() + " (" + dto.getTravelerCount() + " people)",
                 dto.getBudget(),
                 dto.getAccommodationType(),

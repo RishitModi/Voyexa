@@ -98,10 +98,18 @@ const Auth = () => {
         // Both login and register now return tokens
         storeUserAndNavigate(data);
       } else {
-        setError(data?.message || (isLogin ? "Login failed." : "Registration failed."));
+        // Backend validation errors come as a map of { field: message }, not { message }
+        const errorMsg =
+          data?.message ||
+          (typeof data === "object" && !Array.isArray(data)
+            ? Object.values(data).join(" ")
+            : null) ||
+          (isLogin ? "Login failed." : "Registration failed.");
+        setError(errorMsg);
       }
     } catch (err) {
-      setError("Network error: Is the backend running?");
+      console.error("Auth error:", err);
+      setError(err?.message || "Network error: Could not reach the server.");
     } finally {
       setLoading(false);
     }
@@ -236,6 +244,12 @@ const Auth = () => {
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
+
+          {!isLogin && (
+            <p className={`text-xs px-1 -mt-1 ${isDarkTheme ? "text-slate-500" : "text-slate-400"}`}>
+              8–25 characters, must include at least 1 letter and 1 number.
+            </p>
+          )}
 
           {error && (
             <div

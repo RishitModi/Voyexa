@@ -44,9 +44,6 @@ public class Trip {
     @Column(name = "end_date")
     private LocalDate endDate;
 
-    @Size(max = 50)
-    @Column(name = "date_flexibility", length = 50)
-    private String dateFlexibility;
 
     @Size(max = 20)
     @Column(name = "travel_group_type", length = 20)

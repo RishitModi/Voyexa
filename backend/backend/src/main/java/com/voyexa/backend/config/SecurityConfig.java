@@ -66,6 +66,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/trips/inject-images-stream").permitAll()
                         .requestMatchers("/api/dashboard/**").permitAll()
                         .requestMatchers("/api/trips/shared/**").permitAll()
+                        .requestMatchers("/error").permitAll()
                         // Actuator health for Render
                         .requestMatchers("/actuator/**").permitAll()
                         // ── Everything else requires authentication ──

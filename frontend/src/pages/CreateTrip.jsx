@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
     ArrowLeft,
@@ -168,7 +168,7 @@ const LocationAutocomplete = ({
     );
 };
 
-// ── Multi-destination picker ──────────────────────────────────────────────────
+// â”€â”€ Multi-destination picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const MultiDestinationInput = ({ destinations, onAdd, onRemove, onNext, onBack }) => {
     const [inputValue, setInputValue] = useState("");
     const [suggestions, setSuggestions] = useState([]);
@@ -228,7 +228,7 @@ const MultiDestinationInput = ({ destinations, onAdd, onRemove, onNext, onBack }
             </div>
             <h1 className="text-4xl font-black text-white mb-2">Target Locations</h1>
             <p className="text-slate-400 mb-8 font-medium">
-                Add one or more places — the AI will plan a seamless multi-city journey.
+                Add one or more places â€” the AI will plan a seamless multi-city journey.
             </p>
 
             {/* Added destination tags */}
@@ -258,7 +258,7 @@ const MultiDestinationInput = ({ destinations, onAdd, onRemove, onNext, onBack }
                 <div className="relative mb-4">
                     <input
                         type="text"
-                        placeholder={destinations.length === 0 ? "e.g. Paris, Zurich, Tokyo" : "Add another destination…"}
+                        placeholder={destinations.length === 0 ? "e.g. Paris, Zurich, Tokyo" : "Add another destinationâ€¦"}
                         className="w-full p-6 bg-white/5 border border-white/10 rounded-2xl text-xl outline-none focus:border-indigo-500 text-white placeholder:text-slate-600 transition-all"
                         value={inputValue}
                         onFocus={() => setShowSuggestions(true)}
@@ -322,7 +322,7 @@ const CreateTrip = () => {
     const navigate = useNavigate();
     const { state } = useLocation();
 
-    // ── Restore form state from sessionStorage on refresh ──
+    // â”€â”€ Restore form state from sessionStorage on refresh â”€â”€
     const savedFormState = (() => {
         try {
             const cached = sessionStorage.getItem('voyexa_create_trip');
@@ -364,7 +364,7 @@ const CreateTrip = () => {
             return {
                 ...defaultConfig,
                 ...cfg,
-                destinations: cfg.destination ? cfg.destination.split(' → ').map(s => s.trim()).filter(Boolean) : [],
+                destinations: cfg.destination ? cfg.destination.split(' â†’ ').map(s => s.trim()).filter(Boolean) : [],
             };
         }
         if (state?.prefilledDestination) {
@@ -380,7 +380,7 @@ const CreateTrip = () => {
         return defaultConfig;
     });
 
-    // ── Persist form state on every change ──
+    // â”€â”€ Persist form state on every change â”€â”€
     useEffect(() => {
         try {
             sessionStorage.setItem('voyexa_create_trip', JSON.stringify({
@@ -388,7 +388,7 @@ const CreateTrip = () => {
                 tripConfig,
                 selectedProfileIds,
             }));
-        } catch { /* quota exceeded — non-critical */ }
+        } catch { /* quota exceeded â€” non-critical */ }
     }, [step, tripConfig, selectedProfileIds]);
 
     useEffect(() => {
@@ -415,11 +415,8 @@ const CreateTrip = () => {
         fetchProfiles();
     }, []);
 
-    // Calculate month constraints for trending destinations
-    const today = new Date();
-    const minDate = today.toISOString().split('T')[0];
-    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
-    const maxDateConstrained = state?.prefilledDestination ? lastDayOfMonth : undefined;
+    const minDate = new Date().toISOString().split('T')[0];
+    const maxDateConstrained = undefined;
 
     const travelerOptions = [
         { id: "Solo", label: "Solo Traveler", icon: <User size={20} /> },
@@ -428,12 +425,6 @@ const CreateTrip = () => {
         { id: "Friends", label: "Friends", icon: <Ship size={20} /> }
     ];
 
-    const dateFlexibilityOptions = [
-        "Exact dates",
-        "±1 day",
-        "±3 days",
-        "Flexible month"
-    ];
 
     const interestOptions = [
         "Sightseeing",
@@ -490,7 +481,7 @@ const CreateTrip = () => {
     const handleBuildItinerary = () => {
         setApiError("");
 
-        // userId is optional — guests send null
+        // userId is optional â€” guests send null
         const rawUserId = localStorage.getItem("voyexa_user_id");
         const userId = rawUserId ? Number(rawUserId) : null;
 
@@ -500,7 +491,7 @@ const CreateTrip = () => {
 
         // Join multiple destinations into a single string for the backend/AI
         const destinationString = tripConfig.destinations.length > 0
-            ? tripConfig.destinations.join(' → ')
+            ? tripConfig.destinations.join(' â†’ ')
             : tripConfig.destination;
 
         const payload = {
@@ -510,7 +501,6 @@ const CreateTrip = () => {
             destination: destinationString,
             startDate: tripConfig.startDate,
             endDate: tripConfig.endDate,
-            flexibility: tripConfig.flexibility,
             travelers: tripConfig.travelers,
             travelerCount: tripConfig.travelerCount,
             adultCount: tripConfig.adultCount,
@@ -531,7 +521,7 @@ const CreateTrip = () => {
             }
         };
 
-        // Clear saved form state — trip is submitted
+        // Clear saved form state â€” trip is submitted
         sessionStorage.removeItem('voyexa_create_trip');
 
         navigate("/flight-loading", {
@@ -644,28 +634,6 @@ const CreateTrip = () => {
                                         setTripConfig({ ...tripConfig, endDate: e.target.value })
                                     }
                                 />
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 mb-8">
-                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest px-1">
-                                Date flexibility
-                            </label>
-                            <div className="grid grid-cols-2 gap-4">
-                                {dateFlexibilityOptions.map((option) => (
-                                    <button
-                                        key={option}
-                                        onClick={() =>
-                                            setTripConfig({ ...tripConfig, flexibility: option })
-                                        }
-                                        className={`p-4 rounded-2xl border-2 font-bold text-left transition-all ${tripConfig.flexibility === option
-                                                ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
-                                                : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
-                                            }`}
-                                    >
-                                        {option}
-                                    </button>
-                                ))}
                             </div>
                         </div>
 
@@ -814,7 +782,7 @@ const CreateTrip = () => {
                                             >
                                                 <div className="font-bold">{profile.name}</div>
                                                 <div className="text-xs opacity-80 mt-1">
-                                                    {profile.relation || "relation"} • {profile.mobilityLevel || "mobility"}
+                                                    {profile.relation || "relation"} â€¢ {profile.mobilityLevel || "mobility"}
                                                 </div>
                                             </button>
                                         );
@@ -845,7 +813,7 @@ const CreateTrip = () => {
                                                     : "border-slate-500/50 text-transparent"
                                                 }`}
                                         >
-                                            ✓
+                                            âœ“
                                         </span>
                                     </button>
                                 );
@@ -1300,7 +1268,7 @@ const CreateTrip = () => {
                                                     : "border-slate-500/50 text-transparent"
                                                 }`}
                                         >
-                                            ✓
+                                            âœ“
                                         </span>
                                     </button>
                                 );
