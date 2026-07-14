@@ -115,7 +115,7 @@ const LandingPage = () => {
               </button>
               <button
                 type="button"
-                onClick={() => navigateRequiringLogin(navigate, '/create-trip')}
+                onClick={() => navigate('/create-trip')}
                 className="text-white/80 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617] focus-visible:outline-none"
               >
                 Create Trip

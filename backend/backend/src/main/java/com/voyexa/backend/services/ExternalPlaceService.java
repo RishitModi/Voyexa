@@ -72,7 +72,8 @@ public class ExternalPlaceService {
                     .queryParam("apiKey", geoapifyApiKey)
                     .queryParam("limit", limit)
                     // No explicit "type" queryParam to allow more general places (continents, provinces, etc.)
-                    .build(true)
+                    .encode()  // URL-encode all query param values (e.g. spaces → %20, commas → %2C)
+                    .build()
                     .toUri();
 
             String response = restTemplate.getForObject(uri, String.class);
@@ -94,7 +95,8 @@ public class ExternalPlaceService {
                     .queryParam("q", query.trim())
                     .queryParam("format", "jsonv2")
                     .queryParam("limit", limit)
-                    .build(true)
+                    .encode()  // URL-encode all query param values (e.g. spaces → %20, commas → %2C)
+                    .build()
                     .toUri();
 
             HttpHeaders headers = new HttpHeaders();

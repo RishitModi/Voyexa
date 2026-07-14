@@ -1,4 +1,4 @@
-﻿package com.voyexa.backend.DTOS;
+package com.voyexa.backend.DTOS;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
