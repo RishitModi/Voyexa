@@ -104,7 +104,7 @@ const LandingHero = () => {
             </Button>
             <Button
               data-testid="hero-plan-trip-btn"
-              onClick={() => navigateRequiringLogin(navigate, '/create-trip')}
+              onClick={() => navigate('/create-trip')}
               size="lg"
               variant="outline"
               className={`border-2 px-8 py-6 text-lg font-semibold rounded-xl transition-all duration-200 w-full sm:w-auto focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617] focus-visible:outline-none ${

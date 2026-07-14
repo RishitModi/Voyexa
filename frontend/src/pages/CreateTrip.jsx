@@ -258,7 +258,7 @@ const MultiDestinationInput = ({ destinations, onAdd, onRemove, onNext, onBack }
                 <div className="relative mb-4">
                     <input
                         type="text"
-                        placeholder={destinations.length === 0 ? "e.g. Paris, Zurich, Tokyo" : "Add another destinationâ€¦"}
+                        placeholder={destinations.length === 0 ? "e.g. Paris, Zurich, Tokyo" : "Add another destination"}
                         className="w-full p-6 bg-white/5 border border-white/10 rounded-2xl text-xl outline-none focus:border-indigo-500 text-white placeholder:text-slate-600 transition-all"
                         value={inputValue}
                         onFocus={() => setShowSuggestions(true)}
@@ -649,8 +649,8 @@ const CreateTrip = () => {
                                             setTripConfig((prev) => ({ ...prev, travelers: opt.id }))
                                         }
                                         className={`p-5 rounded-2xl border-2 font-bold text-left transition-all flex items-center gap-4 ${tripConfig.travelers === opt.id
-                                                ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
-                                                : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
+                                            ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                                            : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
                                             }`}
                                     >
                                         {opt.icon} {opt.label}
@@ -774,11 +774,10 @@ const CreateTrip = () => {
                                                 key={profile.id}
                                                 type="button"
                                                 onClick={() => toggleProfileSelection(profile.id)}
-                                                className={`p-3 rounded-xl border text-left transition-all ${
-                                                    isSelected
+                                                className={`p-3 rounded-xl border text-left transition-all ${isSelected
                                                         ? "border-indigo-500 bg-indigo-500/15 text-indigo-300"
                                                         : "border-white/10 bg-white/5 text-slate-400 hover:border-indigo-400/40"
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="font-bold">{profile.name}</div>
                                                 <div className="text-xs opacity-80 mt-1">
@@ -802,18 +801,18 @@ const CreateTrip = () => {
                                         key={interest}
                                         onClick={() => toggleInterest(interest)}
                                         className={`p-4 rounded-2xl border-2 font-bold text-left transition-all flex items-center justify-between ${isSelected
-                                                ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
-                                                : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
+                                            ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                                            : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
                                             }`}
                                     >
                                         <span>{interest}</span>
                                         <span
                                             className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs ${isSelected
-                                                    ? "border-indigo-400 bg-indigo-500/30 text-indigo-300"
-                                                    : "border-slate-500/50 text-transparent"
+                                                ? "border-indigo-400 bg-indigo-500/30 text-indigo-300"
+                                                : "border-slate-500/50 text-transparent"
                                                 }`}
                                         >
-                                            âœ“
+                                            ✓
                                         </span>
                                     </button>
                                 );
@@ -880,8 +879,8 @@ const CreateTrip = () => {
                                             })
                                         }
                                         className={`p-4 rounded-2xl border-2 font-bold text-left transition-all ${tripConfig.accommodationType === option
-                                                ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
-                                                : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
+                                            ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                                            : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
                                             }`}
                                     >
                                         {option}
@@ -900,8 +899,8 @@ const CreateTrip = () => {
                                         key={option}
                                         onClick={() => setTripConfig({ ...tripConfig, travelPace: option })}
                                         className={`p-4 rounded-2xl border-2 font-bold text-center transition-all ${tripConfig.travelPace === option
-                                                ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
-                                                : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
+                                            ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                                            : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
                                             }`}
                                     >
                                         {option}
@@ -939,8 +938,8 @@ const CreateTrip = () => {
                                     key={b}
                                     onClick={() => setTripConfig({ ...tripConfig, budget: b })}
                                     className={`p-6 rounded-2xl border-2 font-black text-left transition-all flex justify-between items-center ${tripConfig.budget === b
-                                            ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
-                                            : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
+                                        ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                                        : "border-white/5 bg-white/5 text-slate-500 hover:border-white/10"
                                         }`}
                                 >
                                     {b} {tripConfig.budget === b && <Sparkles size={18} />}
@@ -1268,7 +1267,7 @@ const CreateTrip = () => {
                                                     : "border-slate-500/50 text-transparent"
                                                 }`}
                                         >
-                                            âœ“
+                                            ✓
                                         </span>
                                     </button>
                                 );
